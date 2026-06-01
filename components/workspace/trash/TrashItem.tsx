@@ -1,0 +1,184 @@
+"use client";
+
+import { useState, useRef, useLayoutEffect, useEffect } from "react";
+import { createPortal } from "react-dom";
+import type { TrashItemData } from "@/types/workspace";
+
+interface TrashItemProps extends TrashItemData {
+  isBatchMode: boolean;
+  isSelected: boolean;
+  onSelect: (id: string) => void;
+  onMultiSelect: (id: string) => void;
+  onRestore: (id: string) => void;
+  onDeletePermanently: (id: string) => void;
+}
+
+function FloatingMenu({
+  triggerRef,
+  open,
+  onClose,
+  children,
+  width,
+}: {
+  triggerRef: React.RefObject<HTMLButtonElement | null>;
+  open: boolean;
+  onClose: () => void;
+  children: React.ReactNode;
+  width: number;
+}) {
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    if (open && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setPos({ top: rect.bottom + 4, left: Math.max(8, rect.left) });
+    }
+  }, [open, triggerRef]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(e.target as Node) &&
+        triggerRef.current &&
+        !triggerRef.current.contains(e.target as Node)
+      ) {
+        onClose();
+      }
+    };
+    document.addEventListener("mousedown", handler, true);
+    return () => document.removeEventListener("mousedown", handler, true);
+  }, [open, onClose, triggerRef]);
+
+  if (!open) return null;
+
+  return createPortal(
+    <div
+      ref={menuRef}
+      className="fixed z-50 overflow-hidden rounded-xl border border-mint-border/20 bg-white py-1 shadow-lg"
+      style={{ top: pos.top, left: pos.left, width }}
+    >
+      {children}
+    </div>,
+    document.body,
+  );
+}
+
+export function TrashItem({
+  id,
+  type,
+  name,
+  count,
+  lastModified,
+  createdAt,
+  isBatchMode,
+  isSelected,
+  onSelect,
+  onMultiSelect,
+  onRestore,
+  onDeletePermanently,
+}: TrashItemProps) {
+  const isFolder = type === "folder";
+  const countLabel = isFolder ? `${count ?? 0} 项` : "—";
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuBtnRef = useRef<HTMLButtonElement>(null);
+
+  return (
+    <div
+      className={`group grid w-full grid-cols-[1fr_80px_140px_140px_40px] items-center gap-3 rounded-xl bg-white px-4 py-3 shadow-sm transition hover:bg-mint-hover/70 cursor-pointer ${
+        isSelected ? "ring-2 ring-mint-accent/30 bg-mint-hover/40" : ""
+      }`}
+      onClick={() => {
+        if (isBatchMode) onSelect(id);
+      }}
+    >
+      <span className="flex items-center gap-3 min-w-0">
+        <span
+          className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${
+            isFolder ? "bg-mint-hover text-mint-accent-light" : "bg-mint-bg text-[#6B7280]"
+          }`}
+        >
+          <span className={`material-symbols-outlined ${isFolder ? "filled" : ""} text-[18px]`}>
+            {isFolder ? "folder" : "description"}
+          </span>
+        </span>
+        <span className="truncate text-[13px] font-medium text-mint-text">
+          {type === "file" ? name.replace(/\.md$/, "") : name}
+        </span>
+      </span>
+      <span className="text-center text-xs text-[#9CA3AF]">{countLabel}</span>
+      <span className="text-right text-xs text-[#9CA3AF]">{lastModified}</span>
+      <span className="text-right text-xs text-[#9CA3AF]">{createdAt}</span>
+      <span className="flex justify-end">
+        {isBatchMode ? (
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={() => onSelect(id)}
+            className="trash-checkbox"
+          />
+        ) : (
+          <div className="relative opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+              ref={menuBtnRef}
+              className="flex size-7 items-center justify-center rounded text-mint-muted hover:bg-[#ebefeb] hover:text-mint-accent"
+              type="button"
+              aria-label="更多操作"
+              onClick={(e) => {
+                e.stopPropagation();
+                setMenuOpen((v) => !v);
+              }}
+            >
+              <span className="material-symbols-outlined text-[16px]">more_horiz</span>
+            </button>
+            <FloatingMenu
+              triggerRef={menuBtnRef}
+              open={menuOpen}
+              onClose={() => setMenuOpen(false)}
+              width={128}
+            >
+              <button
+                className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-mint-text hover:bg-mint-hover/60"
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMenuOpen(false);
+                  onMultiSelect(id);
+                }}
+              >
+                <span className="material-symbols-outlined text-[14px]">checklist</span>
+                <span>多选</span>
+              </button>
+              <button
+                className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-mint-text hover:bg-mint-hover/60"
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMenuOpen(false);
+                  onRestore(id);
+                }}
+              >
+                <span className="material-symbols-outlined text-[14px]">restore</span>
+                <span>恢复</span>
+              </button>
+              <button
+                className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-red-600 hover:bg-red-50"
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMenuOpen(false);
+                  onDeletePermanently(id);
+                }}
+              >
+                <span className="material-symbols-outlined text-[14px]">delete_forever</span>
+                <span>彻底删除</span>
+              </button>
+            </FloatingMenu>
+          </div>
+        )}
+      </span>
+    </div>
+  );
+}

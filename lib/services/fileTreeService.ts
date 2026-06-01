@@ -1,0 +1,169 @@
+import type { TreeNode, BreadcrumbItem, TrashItemData } from "@/types/fileTree"
+import { MAX_DEPTH, DEFAULT_NAME } from "@/constants/fileTree"
+import { generateId } from "@/utils/idGenerator"
+import { formatTimestamp } from "@/utils/dateFormatter"
+import { validateName, generateUniqueName } from "@/utils/validator"
+
+export function findNode(nodes: TreeNode[], id: string): TreeNode | null {
+  for (const node of nodes) {
+    if (node.id === id) return node
+    if (node.children) {
+      const found = findNode(node.children, id)
+      if (found) return found
+    }
+  }
+  return null
+}
+
+export function getParent(nodes: TreeNode[], childId: string): TreeNode | null {
+  for (const node of nodes) {
+    if (node.children) {
+      if (node.children.some((c) => c.id === childId)) return node
+      const found = getParent(node.children, childId)
+      if (found) return found
+    }
+  }
+  return null
+}
+
+export function getSiblingNames(nodes: TreeNode[], nodeId: string): string[] {
+  const parent = getParent(nodes, nodeId)
+  if (!parent || !parent.children) return []
+  const node = findNode(nodes, nodeId)
+  if (!node) return []
+  return parent.children
+    .filter((c) => c.id !== nodeId && c.type === node.type)
+    .map((c) => c.name)
+}
+
+export function buildBreadcrumb(tree: TreeNode[], targetId: string): BreadcrumbItem[] {
+  for (const node of tree) {
+    if (node.id === targetId) {
+      return [{ id: node.id, name: node.name, isLast: true }]
+    }
+    if (node.children) {
+      const nested = buildBreadcrumb(node.children, targetId)
+      if (nested.length > 0) {
+        return [{ id: node.id, name: node.name, isLast: false }, ...nested]
+      }
+    }
+  }
+  return []
+}
+
+export function createNode(
+  tree: TreeNode[],
+  parentId: string,
+  type: "folder" | "file",
+  desiredName?: string,
+): { newTree: TreeNode[]; createdNode: TreeNode } | { error: string } {
+  const parent = findNode(tree, parentId)
+  if (!parent) return { error: "父节点不存在" }
+  if (parent.type !== "folder") return { error: "只能在文件夹下创建" }
+  if (parent.level >= MAX_DEPTH) return { error: `最大嵌套深度为 ${MAX_DEPTH} 层` }
+
+  const existingNames = (parent.children ?? [])
+    .filter((c) => c.type === type)
+    .map((c) => c.name)
+  const baseName = desiredName ?? DEFAULT_NAME
+  const name = generateUniqueName(baseName, existingNames)
+  const now = formatTimestamp()
+  const newId = generateId()
+
+  const createdNode: TreeNode = {
+    id: newId,
+    name,
+    type,
+    level: parent.level + 1,
+    expanded: false,
+    createdAt: now,
+    updatedAt: now,
+    ...(type === "folder" ? { children: [] } : {}),
+    ...(type === "file" ? { wordCount: 0 } : {}),
+  }
+
+  const newTree = structuredClone(tree)
+  const targetParent = findNode(newTree, parentId)!
+  if (!targetParent.children) targetParent.children = []
+  targetParent.children.push(createdNode)
+  targetParent.expanded = true
+
+  return { newTree, createdNode }
+}
+
+export function renameNode(
+  tree: TreeNode[],
+  nodeId: string,
+  newName: string,
+): { newTree: TreeNode[] } | { error: string } {
+  const siblingNames = getSiblingNames(tree, nodeId)
+  const error = validateName(newName, siblingNames)
+  if (error) return { error }
+
+  const newTree = structuredClone(tree)
+  const node = findNode(newTree, nodeId)
+  if (!node) return { error: "节点不存在" }
+  node.name = newName.trim()
+  node.updatedAt = formatTimestamp()
+  return { newTree }
+}
+
+export function deleteNode(
+  tree: TreeNode[],
+  nodeId: string,
+): { newTree: TreeNode[]; deletedNode: TreeNode } | { error: string } {
+  const node = findNode(tree, nodeId)
+  if (!node) return { error: "节点不存在" }
+  if (tree.length === 1 && tree[0].id === nodeId) return { error: "不能删除根节点" }
+
+  const newTree = structuredClone(tree)
+  _removeNodeInPlace(newTree, nodeId)
+  return { newTree, deletedNode: structuredClone(node) }
+}
+
+export function moveToTrash(
+  tree: TreeNode[],
+  nodeId: string,
+): { newTree: TreeNode[]; trashItem: TrashItemData } | { error: string } {
+  const result = deleteNode(tree, nodeId)
+  if ("error" in result) return result
+
+  const { newTree, deletedNode } = result
+  const now = formatTimestamp()
+  const count = deletedNode.type === "folder" ? countDescendants(deletedNode) : undefined
+
+  const trashItem: TrashItemData = {
+    id: deletedNode.id,
+    type: deletedNode.type,
+    name: deletedNode.name,
+    lastModified: deletedNode.updatedAt ?? now,
+    createdAt: deletedNode.createdAt ?? now,
+    ...(count !== undefined ? { count } : {}),
+  }
+
+  return { newTree, trashItem }
+}
+
+function _removeNodeInPlace(nodes: TreeNode[], id: string): boolean {
+  for (let i = 0; i < nodes.length; i++) {
+    if (nodes[i].id === id) {
+      nodes.splice(i, 1)
+      return true
+    }
+    if (nodes[i].children) {
+      if (_removeNodeInPlace(nodes[i].children!, id)) return true
+    }
+  }
+  return false
+}
+
+function countDescendants(node: TreeNode): number {
+  if (!node.children) return 0
+  let count = node.children.length
+  for (const child of node.children) {
+    if (child.type === "folder") {
+      count += countDescendants(child)
+    }
+  }
+  return count
+}
