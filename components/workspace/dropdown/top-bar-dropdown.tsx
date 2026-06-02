@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useClickOutside } from "@/hooks/use-click-outside";
-import type { DropdownMenuItem } from "@/types/workspace";
+import type { DropdownMenuItem } from "@/types/fileTree";
 
 interface TopBarDropdownProps {
   items: DropdownMenuItem[];

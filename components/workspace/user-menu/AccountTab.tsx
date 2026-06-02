@@ -3,7 +3,6 @@
 import { useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { validateOldPassword, updatePassword } from "@/lib/services/userService";
 import {
   validateFullName,
   validatePhone,
@@ -23,7 +22,7 @@ function maskPhone(phone: string): string {
 }
 
 export function AccountTab() {
-  const { user, updateUser, logoutAndClear } = useAuth();
+  const { user, updateUser, logoutAndClear, changePassword } = useAuth();
   const router = useRouter();
 
   const [displayName, setDisplayName] = useState(user?.fullName ?? "临时账号");
@@ -159,34 +158,25 @@ export function AccountTab() {
 
   const handleSavePassword = () => {
     if (!user) return;
-    let hasError = false;
 
-    if (!validateOldPassword(user, oldPassword)) {
-      setOldPasswordError("原密码不正确");
-      hasError = true;
-    } else {
-      setOldPasswordError("");
-    }
+    const oldPwdErr = !oldPassword ? "请输入原密码" : "";
+    setOldPasswordError(oldPwdErr);
+    if (oldPwdErr) return;
 
     const strengthError = validatePasswordStrength(newPassword);
-    if (strengthError) {
-      setNewPasswordError(strengthError);
-      hasError = true;
-    } else {
-      setNewPasswordError("");
-    }
+    if (strengthError) { setNewPasswordError(strengthError); return; }
+    setNewPasswordError("");
 
     const confirmError = validateConfirmPassword(newPassword, confirmPassword);
-    if (confirmError) {
-      setConfirmPasswordError(confirmError);
-      hasError = true;
-    } else {
-      setConfirmPasswordError("");
+    if (confirmError) { setConfirmPasswordError(confirmError); return; }
+    setConfirmPasswordError("");
+
+    if (!changePassword(oldPassword, newPassword)) {
+      setOldPasswordError("原密码不正确");
+      return;
     }
+    setOldPasswordError("");
 
-    if (hasError) return;
-
-    updatePassword(user.id, newPassword);
     setPasswordModalOpen(false);
     triggerToast("密码修改成功");
   };

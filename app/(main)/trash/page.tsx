@@ -7,10 +7,10 @@ import { TrashHeader } from "@/components/workspace/trash/TrashHeader";
 import { TrashItem } from "@/components/workspace/trash/TrashItem";
 import { TrashDocumentViewer } from "@/components/workspace/trash/TrashDocumentViewer";
 import { FloatingBatchBar } from "@/components/workspace/trash/FloatingBatchBar";
-import { workspaceRepo } from "@/repositories";
+import { useWorkspaceStore } from "@/store/workspaceStore";
 import { useTrashStore } from "@/store/trashStore";
 import { useFileTreeStore } from "@/store/fileTreeStore";
-import type { TrashItemData } from "@/types/workspace";
+import type { TrashItemData } from "@/types/fileTree";
 
 export default function TrashPage() {
   const router = useRouter();
@@ -31,6 +31,7 @@ export default function TrashPage() {
   const fileTree = useFileTreeStore((s) => s.tree);
   const selectedNodeId = useFileTreeStore((s) => s.selectedNodeId);
   const initialSelectedRef = useRef(selectedNodeId);
+  const { mockUser } = useWorkspaceStore();
 
   const [previewItem, setPreviewItem] = useState<TrashItemData | null>(null);
 
@@ -84,7 +85,7 @@ export default function TrashPage() {
   };
 
   return (
-    <SidebarLayout userInfo={workspaceRepo.mockUser} isTrashActive>
+    <SidebarLayout userInfo={mockUser} isTrashActive>
       {previewItem ? (
         <TrashDocumentViewer
           item={previewItem}

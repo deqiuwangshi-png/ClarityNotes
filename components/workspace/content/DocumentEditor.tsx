@@ -1,6 +1,6 @@
 "use client";
 
-import type { BreadcrumbItem, DropdownMenuItem } from "@/types/workspace";
+import type { BreadcrumbItem, DropdownMenuItem } from "@/types/fileTree";
 import { EditorHeader } from "@/components/workspace/editor/editor-header";
 import { EditorBody } from "@/components/workspace/editor/editor-body";
 import { useEditorStore } from "@/store/editorStore";

@@ -9,8 +9,6 @@ export interface User {
   createdAt: string
 }
 
-export type UserSession = Omit<User, 'password'>
-
 export interface LoginPayload {
   email: string
   password: string

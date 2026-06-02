@@ -12,7 +12,7 @@ export function updatePassword(userId: string, newPassword: string): void {
 
 export function updateUserInfo(user: User, updates: Partial<User>): User {
   const updated: User = { ...user, ...updates }
-  userRepo.updateUserInStorage(updated)
+  sessionRepo.updateSessionUser(updated)
   return updated
 }
 

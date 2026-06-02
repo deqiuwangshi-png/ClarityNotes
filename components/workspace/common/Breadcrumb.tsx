@@ -1,6 +1,6 @@
 "use client";
 
-import type { BreadcrumbItem } from "@/types/workspace";
+import type { BreadcrumbItem } from "@/types/fileTree";
 
 interface BreadcrumbProps {
   paths: BreadcrumbItem[];

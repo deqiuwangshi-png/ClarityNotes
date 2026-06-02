@@ -1,14 +1,21 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 
 interface EditorTitleProps {
   title: string;
   onTitleChange: (title: string) => void;
+  autoFocus?: boolean;
 }
 
-export function EditorTitle({ title, onTitleChange }: EditorTitleProps) {
+export function EditorTitle({ title, onTitleChange, autoFocus }: EditorTitleProps) {
   const titleRef = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => {
+    if (autoFocus && titleRef.current) {
+      titleRef.current.focus();
+    }
+  }, [autoFocus]);
 
   return (
     <h1

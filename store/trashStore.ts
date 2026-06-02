@@ -20,10 +20,10 @@ interface TrashState {
   toggleSelectItem: (itemId: string) => void
   toggleSelectAll: () => void
 
-  restoreItem: (itemId: string, fileTree: TreeNode[]) => { newTree: TreeNode[] } | null
+  restoreItem: (itemId: string, fileTree: TreeNode[]) => { newTree: TreeNode[]; restoredId?: string } | null
   deletePermanently: (itemId: string) => void
   emptyTrash: () => void
-  batchRestore: (fileTree: TreeNode[]) => { newTree: TreeNode[] } | null
+  batchRestore: (fileTree: TreeNode[]) => { newTree: TreeNode[]; restoredIds?: string[] } | null
   batchDelete: () => void
 }
 
@@ -76,7 +76,7 @@ export const useTrashStore = create<TrashState>()((set, get) => ({
     if ("error" in result) return null
 
     set({ items: trashRepo.getTrash() })
-    return { newTree: result.newTree }
+    return { newTree: result.newTree, restoredId: result.restoredId }
   },
 
   deletePermanently: (itemId: string) => {
@@ -96,7 +96,7 @@ export const useTrashStore = create<TrashState>()((set, get) => ({
 
     const result = batchRestoreService(selectedItems, fileTree)
     set({ items: trashRepo.getTrash(), isBatchMode: false, selectedIds: new Set<string>() })
-    return { newTree: result.newTree }
+    return { newTree: result.newTree, restoredIds: result.restoredIds }
   },
 
   batchDelete: () => {

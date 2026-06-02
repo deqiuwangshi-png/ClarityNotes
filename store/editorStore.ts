@@ -1,21 +1,23 @@
 import { create } from "zustand"
+import type { DocNode } from "@/types/fileTree"
 import { countWords } from "@/utils/editor"
 import { saveContent, updateTitle } from "@/lib/services/editorService"
 import { findNode } from "@/lib/services/fileTreeService"
 import { useFileTreeStore } from "@/store/fileTreeStore"
 
 const AUTO_SAVE_DELAY = 2000
+const EMPTY_DOC: DocNode = { type: "doc", content: [] }
 
 interface EditorState {
-  content: string
+  content: DocNode
   title: string
   wordCount: number
   isSaved: boolean
   isDirty: boolean
 
-  loadFromNode: (nodeId: string, nodeContent?: string, nodeTitle?: string) => void
+  loadFromNode: (nodeId: string, nodeContent?: DocNode, nodeTitle?: string) => void
   loadEditorFromTree: (nodeId: string) => void
-  setContent: (html: string) => void
+  setContent: (doc: DocNode) => void
   setTitle: (newTitle: string) => void
   saveNow: () => void
   cancelAutoSave: () => void
@@ -46,22 +48,24 @@ export const useEditorStore = create<EditorState>()((set, get) => {
 
   function scheduleSave() {
     if (saveTimer !== null) clearTimeout(saveTimer)
+    const snapshotNodeId = useFileTreeStore.getState().selectedNodeId
     saveTimer = setTimeout(() => {
       saveTimer = null
+      if (snapshotNodeId !== useFileTreeStore.getState().selectedNodeId) return
       performSave()
     }, AUTO_SAVE_DELAY)
   }
 
   return {
-    content: "",
+    content: EMPTY_DOC,
     title: "",
     wordCount: 0,
     isSaved: true,
     isDirty: false,
 
-    loadFromNode: (nodeId: string, nodeContent?: string, nodeTitle?: string) => {
+    loadFromNode: (nodeId: string, nodeContent?: DocNode, nodeTitle?: string) => {
       if (saveTimer !== null) clearTimeout(saveTimer)
-      const content = nodeContent ?? ""
+      const content = nodeContent ?? EMPTY_DOC
       set({
         content,
         title: nodeTitle ?? "",
@@ -75,7 +79,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
       const tree = useFileTreeStore.getState().tree
       const node = findNode(tree, nodeId)
       if (saveTimer !== null) clearTimeout(saveTimer)
-      const content = node?.content ?? ""
+      const content = node?.content ?? EMPTY_DOC
       set({
         content,
         title: node?.name ?? "",
@@ -85,8 +89,8 @@ export const useEditorStore = create<EditorState>()((set, get) => {
       })
     },
 
-    setContent: (html: string) => {
-      set({ content: html, wordCount: countWords(html), isDirty: true, isSaved: false })
+    setContent: (doc: DocNode) => {
+      set({ content: doc, wordCount: countWords(doc), isDirty: true, isSaved: false })
       scheduleSave()
     },
 

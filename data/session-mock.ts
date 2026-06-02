@@ -13,6 +13,12 @@ export function createSession(user: User, rememberMe?: boolean): void {
   }
 }
 
+export function updateSessionUser(user: User): void {
+  if (typeof window === 'undefined') return
+  const key = localStorage.getItem(SESSION_KEY) !== null ? localStorage : sessionStorage
+  key.setItem(SESSION_KEY, JSON.stringify(user))
+}
+
 export function clearSession(): void {
   if (typeof window === 'undefined') return
   localStorage.removeItem(SESSION_KEY)
@@ -37,4 +43,25 @@ export function clearAllData(): void {
   if (typeof window === 'undefined') return
   localStorage.clear()
   sessionStorage.clear()
+}
+
+const SEARCH_RECENT_KEY = 'claritynotes_recent_searches'
+
+export function getRecentSearches(): string[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = localStorage.getItem(SEARCH_RECENT_KEY)
+    return raw ? (JSON.parse(raw) as string[]) : []
+  } catch {
+    return []
+  }
+}
+
+export function setRecentSearches(searches: string[]): void {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.setItem(SEARCH_RECENT_KEY, JSON.stringify(searches))
+  } catch {
+    /* ignore quota */
+  }
 }

@@ -12,7 +12,7 @@ import {
   useDocumentInfo,
 } from "@/store/fileTreeStore";
 import { useEditorStore } from "@/store/editorStore";
-import { workspaceRepo } from "@/repositories";
+import { useWorkspaceStore } from "@/store/workspaceStore";
 
 export default function WorkspacePage() {
   const currentView = useFileTreeStore((s) => s.currentView);
@@ -25,6 +25,7 @@ export default function WorkspacePage() {
   const documentInfo = useDocumentInfo();
 
   const loadEditorFromTree = useEditorStore((s) => s.loadEditorFromTree);
+  const { mockUser, mockMenuActions } = useWorkspaceStore();
 
   useEffect(() => {
     if (selectedNodeId && documentInfo) {
@@ -47,13 +48,13 @@ export default function WorkspacePage() {
   }, []);
 
   return (
-    <SidebarLayout userInfo={workspaceRepo.mockUser}>
+    <SidebarLayout userInfo={mockUser}>
       {currentView === "editor" && documentInfo ? (
         <DocumentEditor
           breadcrumbPaths={breadcrumb}
           onBreadcrumbClick={handleBreadcrumbClick}
           onMenuAction={handleMenuAction}
-          menuActions={workspaceRepo.mockMenuActions}
+          menuActions={mockMenuActions}
         />
       ) : (
         <FolderView

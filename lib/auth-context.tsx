@@ -9,7 +9,7 @@ import {
   clearSession,
   getCurrentUser,
 } from '@/lib/services/auth-service'
-import { updateUserInfo, clearAllUserData } from '@/lib/services/userService'
+import { updateUserInfo, clearAllUserData, validateOldPassword, updatePassword } from '@/lib/services/userService'
 
 interface AuthState {
   user: User | null
@@ -23,6 +23,7 @@ interface AuthContextValue extends AuthState {
   logout: () => void
   logoutAndClear: () => void
   updateUser: (updates: Partial<User>) => void
+  changePassword: (oldPassword: string, newPassword: string) => boolean
   clearError: () => void
   authError: string | null
 }
@@ -104,6 +105,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
+  const changePassword = useCallback((oldPassword: string, newPassword: string): boolean => {
+    const currentUser = getCurrentUser()
+    if (!currentUser) return false
+    if (!validateOldPassword(currentUser, oldPassword)) return false
+    updatePassword(currentUser.id, newPassword)
+    return true
+  }, [])
+
   const clearError = useCallback(() => {
     setAuthError(null)
   }, [])
@@ -117,6 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     logout,
     logoutAndClear,
     updateUser,
+    changePassword,
     clearError,
     authError,
   }

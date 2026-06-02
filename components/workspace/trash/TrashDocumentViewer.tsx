@@ -1,7 +1,7 @@
 "use client";
 
 import { EditorBody } from "@/components/workspace/editor/editor-body";
-import type { TrashItemData } from "@/types/workspace";
+import type { TrashItemData } from "@/types/fileTree";
 
 interface TrashDocumentViewerProps {
   item: TrashItemData;

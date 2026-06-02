@@ -1,6 +1,6 @@
 "use client";
 
-import type { BreadcrumbItem, DropdownMenuItem } from "@/types/workspace";
+import type { BreadcrumbItem, DropdownMenuItem } from "@/types/fileTree";
 import { Breadcrumb } from "@/components/workspace/common/Breadcrumb";
 import { SaveStatusBadge } from "@/components/workspace/common/SaveStatusBadge";
 import { TopBarDropdown } from "@/components/workspace/dropdown/top-bar-dropdown";

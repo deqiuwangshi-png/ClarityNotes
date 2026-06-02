@@ -1,5 +1,6 @@
-import type { TreeNode, SearchResultItem } from "@/types/fileTree"
+import type { TreeNode, SearchResultItem, DocNode } from "@/types/fileTree"
 import { buildBreadcrumb } from "@/lib/services/fileTreeService"
+import { extractPlainText } from "@/utils/editor"
 
 function collectFiles(nodes: TreeNode[]): TreeNode[] {
   const files: TreeNode[] = []
@@ -40,12 +41,12 @@ export function searchNodes(tree: TreeNode[], query: string): SearchResultItem[]
   return results
 }
 
-export function extractSnippet(htmlContent: string | undefined, query: string): string {
-  if (!htmlContent) return ""
+export function extractSnippet(doc: DocNode | undefined, query: string): string {
+  if (!doc) return ""
   const q = query.trim()
   if (!q) return ""
 
-  const plainText = htmlContent.replace(/<[^>]*>/g, "")
+  const plainText = extractPlainText(doc)
   const idx = plainText.toLowerCase().indexOf(q.toLowerCase())
   if (idx === -1) return plainText.slice(0, 50)
 

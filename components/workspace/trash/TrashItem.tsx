@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { FloatingMenu } from "@/components/ui/floating-menu";
-import type { TrashItemData } from "@/types/workspace";
+import type { TrashItemData } from "@/types/fileTree";
 
 interface TrashItemProps extends TrashItemData {
   isBatchMode: boolean;

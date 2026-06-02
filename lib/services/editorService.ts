@@ -1,4 +1,4 @@
-import type { TreeNode } from "@/types/fileTree"
+import type { TreeNode, DocNode } from "@/types/fileTree"
 import { findNode } from "@/lib/services/fileTreeService"
 import { formatTimestamp } from "@/utils/dateFormatter"
 import { validateName } from "@/utils/validator"
@@ -7,7 +7,7 @@ import { getSiblingNames } from "@/lib/services/fileTreeService"
 export function saveContent(
   tree: TreeNode[],
   nodeId: string,
-  content: string,
+  content: DocNode,
   wordCount: number,
 ): { tree: TreeNode[] } | { error: string } {
   const newTree = structuredClone(tree)

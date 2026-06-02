@@ -1,10 +1,16 @@
-export function countWords(html: string): number {
-  const div = document.createElement("div")
-  div.innerHTML = html
-  const text = div.textContent || div.innerText || ""
-  const trimmed = text.trim()
-  if (!trimmed) return 0
-  return trimmed.split(/\s+/).length
+import type { DocNode } from "@/types/fileTree"
+
+export function extractPlainText(node: DocNode): string {
+  if (node.text) return node.text
+  if (!node.content) return ""
+  return node.content.map(extractPlainText).join("")
+}
+
+export function countWords(doc: DocNode | undefined): number {
+  if (!doc) return 0
+  const text = extractPlainText(doc).trim()
+  if (!text) return 0
+  return text.split(/\s+/).length
 }
 
 export function debounce<T extends (...args: unknown[]) => void>(fn: T, delay: number): T & { cancel: () => void } {

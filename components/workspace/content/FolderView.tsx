@@ -1,6 +1,6 @@
 "use client";
 
-import type { BreadcrumbItem, FolderItem } from "@/types/workspace";
+import type { BreadcrumbItem, FolderItem } from "@/types/fileTree";
 import { useSidebarLayout } from "@/components/workspace/layout/SidebarLayout";
 import { Breadcrumb } from "@/components/workspace/common/Breadcrumb";
 import { FolderListHeader } from "@/components/workspace/folder/folder-list-header";

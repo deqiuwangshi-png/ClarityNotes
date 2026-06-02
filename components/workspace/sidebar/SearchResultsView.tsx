@@ -17,7 +17,7 @@ function highlightMatch(text: string, query: string) {
   const parts = text.split(new RegExp(`(${escaped})`, "gi"));
   return parts.map((part, i) =>
     part.toLowerCase() === query.toLowerCase()
-      ? <mark key={i} className="rounded bg-mint-hover px-0.5 text-mint-text">{part}</mark>
+      ? <mark key={`${i}-${part.substring(0, 8)}`} className="rounded bg-mint-hover px-0.5 text-mint-text">{part}</mark>
       : part
   );
 }

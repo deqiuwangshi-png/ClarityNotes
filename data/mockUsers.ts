@@ -37,8 +37,6 @@ export const MOCK_USERS: MockUser[] = [
   },
 ]
 
-const SESSION_USER_KEY = "claritynotes_auth_user"
-
 export function findUserByEmail(email: string): User | undefined {
   const found = MOCK_USERS.find((u) => u.email === email)
   if (!found) return undefined
@@ -62,7 +60,7 @@ export function addUser(user: MockUser | User & { password: string }): void {
   MOCK_USERS.push(user as MockUser)
 }
 
-export function stripPassword(user: MockUser): User {
+function stripPassword(user: MockUser): User {
   return {
     id: user.id,
     uid: user.uid,
@@ -72,33 +70,5 @@ export function stripPassword(user: MockUser): User {
     avatar: user.avatar,
     membership: user.membership,
     createdAt: user.createdAt,
-  }
-}
-
-export function getUserFromStorage(): User | null {
-  if (typeof window === "undefined") return null
-  try {
-    const stored = localStorage.getItem(SESSION_USER_KEY) ?? sessionStorage.getItem(SESSION_USER_KEY)
-    if (stored) {
-      return JSON.parse(stored) as User
-    }
-  } catch {
-    localStorage.removeItem(SESSION_USER_KEY)
-    sessionStorage.removeItem(SESSION_USER_KEY)
-  }
-  return null
-}
-
-export function updateUserInStorage(user: User): void {
-  if (typeof window === "undefined") return
-  const key = localStorage.getItem(SESSION_USER_KEY) ? SESSION_USER_KEY : sessionStorage.getItem(SESSION_USER_KEY) ? SESSION_USER_KEY : null
-  if (!key) {
-    localStorage.setItem(SESSION_USER_KEY, JSON.stringify(user))
-    return
-  }
-  if (key === SESSION_USER_KEY) {
-    localStorage.setItem(key, JSON.stringify(user))
-  } else {
-    sessionStorage.setItem(key, JSON.stringify(user))
   }
 }

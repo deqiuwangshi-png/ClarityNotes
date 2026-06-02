@@ -1,3 +1,11 @@
+export interface DocNode {
+  type?: string
+  attrs?: Record<string, unknown>
+  content?: DocNode[]
+  marks?: { type: string; attrs?: Record<string, unknown> }[]
+  text?: string
+}
+
 export interface UserInfo {
   displayName: string
   email: string
@@ -14,7 +22,7 @@ export interface TreeNode {
   createdAt?: string
   updatedAt?: string
   wordCount?: number
-  content?: string
+  content?: DocNode
 }
 
 export interface BreadcrumbItem {
@@ -26,7 +34,7 @@ export interface BreadcrumbItem {
 export interface DocumentInfo {
   id: string
   title: string
-  content: string
+  content: DocNode
   createdAt: string
   lastModified: string
   isSaved: boolean
@@ -61,7 +69,7 @@ export interface TrashItemData {
   count?: number
   lastModified: string
   createdAt: string
-  content?: string
+  content?: DocNode
   wordCount?: number
 }
 

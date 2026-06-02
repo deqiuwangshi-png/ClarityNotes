@@ -29,7 +29,7 @@ interface FileTreeState {
   cancelCreate: (nodeId: string) => void
   deleteNode: (nodeId: string) => void
   setTree: (tree: TreeNode[]) => void
-  restoreFromTrash: (nodeId: string, trashStoreRestore: (id: string, tree: TreeNode[]) => { newTree: TreeNode[] } | null) => void
+  restoreFromTrash: (nodeId: string, trashStoreRestore: (id: string, tree: TreeNode[]) => { newTree: TreeNode[]; restoredId?: string } | null) => void
 }
 
 export const useFileTreeStore = create<FileTreeState>()((set, get) => ({
@@ -124,13 +124,33 @@ export const useFileTreeStore = create<FileTreeState>()((set, get) => ({
   },
 
   restoreFromTrash: (nodeId: string, trashStoreRestore) => {
-    const { tree } = get()
+    const { tree, expandedIds } = get()
     const result = trashStoreRestore(nodeId, tree)
     if (!result) return
     fileTreeRepo.setTree(result.newTree)
-    set({ tree: result.newTree, selectedNodeId: result.newTree[0]?.id ?? null, currentView: "folder" })
+
+    const nextExpanded = new Set(expandedIds)
+    if (result.restoredId) {
+      const parentId = findParentId(result.newTree, result.restoredId)
+      if (parentId) nextExpanded.add(parentId)
+    }
+
+    set({ tree: result.newTree, selectedNodeId: result.newTree[0]?.id ?? null, currentView: "folder", expandedIds: nextExpanded })
   },
 }))
+
+function findParentId(nodes: TreeNode[], childId: string): string | null {
+  for (const node of nodes) {
+    if (node.children?.some((c) => c.id === childId)) {
+      return node.id
+    }
+    if (node.children) {
+      const found = findParentId(node.children, childId)
+      if (found) return found
+    }
+  }
+  return null
+}
 
 export function useSelectedNode(): TreeNode | null {
   const tree = useFileTreeStore((s) => s.tree)

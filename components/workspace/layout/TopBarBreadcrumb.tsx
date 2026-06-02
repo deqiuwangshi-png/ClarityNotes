@@ -2,7 +2,7 @@
 
 import { useCallback } from "react";
 import { useFileTreeStore, useBreadcrumb } from "@/store/fileTreeStore";
-import type { BreadcrumbItem } from "@/types/workspace";
+import type { BreadcrumbItem } from "@/types/fileTree";
 
 function BreadcrumbItemView({ item, onNavigate }: { item: BreadcrumbItem; onNavigate: (id: string) => void }) {
   if (item.isLast) {

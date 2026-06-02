@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useEffect } from "react";
+import type { DocNode } from "@/types/fileTree";
 import { useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
@@ -32,22 +33,26 @@ const extensions = [
 
 export function EditorBody({ readOnly, externalTitle, externalContent }: EditorBodyProps) {
   const isSettingContent = useRef(false);
+  const hasAutoFocused = useRef(false);
   const content = useEditorStore((s) => s.content);
   const title = useEditorStore((s) => s.title);
   const setContent = useEditorStore((s) => s.setContent);
   const setTitle = useEditorStore((s) => s.setTitle);
   const saveNow = useEditorStore((s) => s.saveNow);
   const selectedNodeId = useFileTreeStore((s) => s.selectedNodeId);
+  const creatingNodeId = useFileTreeStore((s) => s.creatingNodeId);
+
+  const isNewDocument = !readOnly && selectedNodeId === creatingNodeId;
 
   const editor = useEditor({
     extensions,
-    content: readOnly ? (externalContent ?? "") : content,
+    content: readOnly ? (externalContent ?? undefined) : content,
     editable: !readOnly,
     onUpdate: readOnly
       ? undefined
       : ({ editor: ed }) => {
           if (isSettingContent.current) return;
-          setContent(ed.getHTML());
+          setContent(ed.getJSON() as DocNode);
         },
   });
 
@@ -59,6 +64,16 @@ export function EditorBody({ readOnly, externalTitle, externalContent }: EditorB
       isSettingContent.current = false;
     });
   }, [selectedNodeId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (isNewDocument && editor && !hasAutoFocused.current) {
+      hasAutoFocused.current = true;
+      editor.commands.focus("end");
+    }
+    if (!isNewDocument) {
+      hasAutoFocused.current = false;
+    }
+  }, [isNewDocument, editor]);
 
   useEffect(() => {
     if (!editor || !readOnly || externalContent === undefined) return;
@@ -79,7 +94,7 @@ export function EditorBody({ readOnly, externalTitle, externalContent }: EditorB
     <div className="flex-1 overflow-y-auto bg-mint-bg" style={{ scrollbarGutter: "stable" }}>
       <div className="mx-auto max-w-[800px] px-6 py-6">
         <div className="editor-card p-10">
-          <EditorTitle title={title} onTitleChange={handleTitleChange} />
+          <EditorTitle title={title} onTitleChange={handleTitleChange} autoFocus={isNewDocument} />
           <EditorContentArea editor={editor} />
         </div>
       </div>

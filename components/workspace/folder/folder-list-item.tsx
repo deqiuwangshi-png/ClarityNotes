@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback } from "react";
 import { FloatingMenu } from "@/components/ui/floating-menu";
 import { useFileTreeStore } from "@/store/fileTreeStore";
-import type { FolderItem } from "@/types/workspace";
+import type { FolderItem } from "@/types/fileTree";
 
 interface FolderListItemProps {
   item: FolderItem;
