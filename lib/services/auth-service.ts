@@ -2,12 +2,23 @@ import type { User, RegisterPayload, AuthResponse } from "@/types/auth"
 import { userRepo, sessionRepo } from "@/repositories"
 import { generateUid } from "@/utils/uid"
 
+function toSafeUser(user: User & { password: string }): User {
+  return {
+    id: user.id,
+    uid: user.uid,
+    email: user.email,
+    phone: user.phone,
+    fullName: user.fullName,
+    avatar: user.avatar,
+    membership: user.membership,
+    createdAt: user.createdAt,
+  }
+}
+
 export function validateLogin(email: string, password: string): AuthResponse {
-  const user = userRepo.MOCK_USERS.find(
-    (u) => u.email === email && u.password === password,
-  )
-  if (user) {
-    return { success: true, user }
+  const mockUser = userRepo.findUserCredentials(email, password)
+  if (mockUser) {
+    return { success: true, user: toSafeUser(mockUser) }
   }
   return { success: false, error: "邮箱或密码错误，请重试" }
 }
@@ -17,7 +28,7 @@ export function validateRegister(payload: RegisterPayload): AuthResponse {
   if (existing) {
     return { success: false, error: "该邮箱已被注册" }
   }
-  const newUser: User = {
+  const newUser: User & { password: string } = {
     id: `user-${Date.now()}`,
     uid: generateUid(),
     email: payload.email,
@@ -28,7 +39,7 @@ export function validateRegister(payload: RegisterPayload): AuthResponse {
     createdAt: new Date().toISOString(),
   }
   userRepo.addUser(newUser)
-  return { success: true, user: newUser }
+  return { success: true, user: toSafeUser(newUser) }
 }
 
 export function createSession(user: User, rememberMe?: boolean): void {

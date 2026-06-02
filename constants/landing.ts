@@ -12,10 +12,10 @@ export const HERO_BADGE: HeroBadge = {
   text: "认知优先 · 无干扰书写",
 }
 
-export const HERO_TITLE = "让思绪自由流动\n笔记工具回归本质"
+export const HERO_TITLE = "让思绪自由流动\n构建个人系统"
 
 export const HERO_DESCRIPTION =
-  "ClarityNotes 消除了复杂的文件夹层级和视觉噪音。扁平的笔记架构 + 智能全局搜索，为您构建一座“第二大脑”，专注于真正重要的事情——思考与创造。"
+  "ClarityNotes 不只是笔记工具。它帮助你记录知识、整理思考、沉淀经验，并通过扁平化组织与极速搜索，逐步构建属于自己的个人知识操作系统。。"
 
 export const FEATURES: Feature[] = [
   {
@@ -53,15 +53,15 @@ export const PHILOSOPHY_POINTS: PhilosophyPoint[] = [
 
 export const TESTIMONIAL: Testimonial = {
   quote:
-    "过去我用各种笔记软件总觉得很难坚持，直到遇见 ClarityNotes —— 它真的让我爱上了记录。干净、理智，而且搜索功能极其强大。",
+    "以前我的知识散落在文档、聊天记录和浏览器收藏夹中。现在所有内容都归档在一个统一空间里，需要时总能快速找到。",
   author: "产品设计师 · 李心怡",
 }
 
 export const STATS: Stat[] = [
-  { value: "98%", label: "用户留存率" },
-  { value: "12k+", label: "活跃创造者" },
-  { value: "4.9", label: "App Store 评分" },
-  { value: "0", label: "认知摩擦设计原则" },
+  { value: "∞", label: "知识复利增长" },
+  { value: "1", label: "个人知识中枢" },
+  { value: "100%", label: "思考自主掌控" },
+  { value: "0", label: "信息散落焦虑" },
 ]
 
 export const CTA_TITLE = "准备好清晰思考了吗？"

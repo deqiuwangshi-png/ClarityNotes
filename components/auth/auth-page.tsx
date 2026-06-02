@@ -11,22 +11,19 @@ import { SocialLogin } from "@/components/auth/SocialLogin";
 import type { RegisterPayload } from "@/types/auth";
 
 export default function AuthPage() {
-  const { activeTab, switchTab } = useAuthTab();
+  const { login, register, clearError } = useAuth();
+  const { activeTab, switchTab } = useAuthTab(clearError);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const router = useRouter();
-  const { login, register } = useAuth();
 
   const handleLoginSubmit = useCallback(
     async ({ email, password, rememberMe }: { email: string; password: string; rememberMe?: boolean }) => {
       setIsSubmitting(true);
       setSubmitError(null);
       try {
-        const result = await login(email, password);
+        const result = await login(email, password, rememberMe);
         if (result.success) {
-          if (rememberMe) {
-            console.log("【记住我】已启用");
-          }
           router.push("/workspace");
         } else {
           setSubmitError(result.error || "登录失败，请重试");

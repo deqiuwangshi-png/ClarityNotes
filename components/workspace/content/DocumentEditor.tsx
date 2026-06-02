@@ -1,10 +1,8 @@
 "use client";
 
 import type { BreadcrumbItem, DropdownMenuItem } from "@/types/workspace";
-import { useTextSelection } from "@/hooks/use-text-selection";
 import { EditorHeader } from "@/components/workspace/editor/editor-header";
 import { EditorBody } from "@/components/workspace/editor/editor-body";
-import { BubbleMenu } from "@/components/workspace/content/BubbleMenu";
 import { useEditorStore } from "@/store/editorStore";
 
 interface DocumentEditorProps {
@@ -15,7 +13,6 @@ interface DocumentEditorProps {
 }
 
 export function DocumentEditor({ breadcrumbPaths, onBreadcrumbClick, onMenuAction, menuActions }: DocumentEditorProps) {
-  const textSelection = useTextSelection();
   const isSaved = useEditorStore((s) => s.isSaved);
 
   return (
@@ -28,7 +25,6 @@ export function DocumentEditor({ breadcrumbPaths, onBreadcrumbClick, onMenuActio
         onMenuAction={onMenuAction}
       />
       <EditorBody />
-      <BubbleMenu visible={textSelection.visible} position={textSelection.position} above={textSelection.above} />
     </div>
   );
 }

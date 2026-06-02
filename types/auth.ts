@@ -2,13 +2,14 @@ export interface User {
   id: string
   uid: string
   email: string
-  password: string
   phone?: string
   fullName: string
   avatar: string
   membership: 'free' | 'pro' | 'enterprise'
   createdAt: string
 }
+
+export type UserSession = Omit<User, 'password'>
 
 export interface LoginPayload {
   email: string

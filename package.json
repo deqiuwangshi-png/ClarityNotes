@@ -9,6 +9,13 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@floating-ui/dom": "^1.7.6",
+    "@tiptap/extension-bubble-menu": "^3.24.0",
+    "@tiptap/extension-image": "^3.24.0",
+    "@tiptap/extension-placeholder": "^3.24.0",
+    "@tiptap/extension-table": "^3.24.0",
+    "@tiptap/react": "^3.24.0",
+    "@tiptap/starter-kit": "^3.24.0",
     "clsx": "^2.1.1",
     "next": "16.2.6",
     "react": "19.2.4",

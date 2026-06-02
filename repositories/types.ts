@@ -2,9 +2,12 @@ import type { User } from "@/types/auth"
 import type { TreeNode, TrashItemData, UserInfo, DropdownMenuItem } from "@/types/fileTree"
 
 export interface IUserRepository {
-  MOCK_USERS: User[]
+  MOCK_USERS: (User & { password: string })[]
   findUserByEmail(email: string): User | undefined
-  addUser(user: User): void
+  findUserCredentials(email: string, password: string): (User & { password: string }) | undefined
+  getPasswordForUser(userId: string): string | undefined
+  updatePassword(userId: string, newPassword: string): void
+  addUser(user: User & { password: string }): void
   getUserFromStorage(): User | null
   updateUserInStorage(user: User): void
 }

@@ -28,8 +28,8 @@ export function UserSection({ user, onToggleSidebar }: UserSectionProps) {
   const router = useRouter();
   const { logout } = useAuth();
 
-  const handleLogout = useCallback(async () => {
-    await logout();
+  const handleLogout = useCallback(() => {
+    logout();
     router.push("/login");
   }, [logout, router]);
 

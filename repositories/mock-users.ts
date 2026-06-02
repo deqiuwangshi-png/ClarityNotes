@@ -3,6 +3,9 @@ import type { IUserRepository } from "@/repositories/types"
 import {
   MOCK_USERS,
   findUserByEmail,
+  findUserCredentials,
+  getPasswordForUser,
+  updatePassword,
   addUser,
   getUserFromStorage,
   updateUserInStorage,
@@ -15,7 +18,19 @@ export class MockUserRepository implements IUserRepository {
     return findUserByEmail(email)
   }
 
-  addUser(user: User): void {
+  findUserCredentials(email: string, password: string): (User & { password: string }) | undefined {
+    return findUserCredentials(email, password)
+  }
+
+  getPasswordForUser(userId: string): string | undefined {
+    return getPasswordForUser(userId)
+  }
+
+  updatePassword(userId: string, newPassword: string): void {
+    updatePassword(userId, newPassword)
+  }
+
+  addUser(user: User & { password: string }): void {
     addUser(user)
   }
 

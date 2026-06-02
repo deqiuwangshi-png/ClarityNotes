@@ -1,6 +1,10 @@
 import type { User } from "@/types/auth"
 
-export const MOCK_USERS: User[] = [
+interface MockUser extends User {
+  password: string
+}
+
+export const MOCK_USERS: MockUser[] = [
   {
     id: 'user-001',
     uid: 'A3fG9kL2',
@@ -36,28 +40,65 @@ export const MOCK_USERS: User[] = [
 const SESSION_USER_KEY = "claritynotes_auth_user"
 
 export function findUserByEmail(email: string): User | undefined {
-  return MOCK_USERS.find((u) => u.email === email)
+  const found = MOCK_USERS.find((u) => u.email === email)
+  if (!found) return undefined
+  return stripPassword(found)
 }
 
-export function addUser(user: User): void {
-  MOCK_USERS.push(user)
+export function findUserCredentials(email: string, password: string): MockUser | undefined {
+  return MOCK_USERS.find((u) => u.email === email && u.password === password)
+}
+
+export function getPasswordForUser(userId: string): string | undefined {
+  return MOCK_USERS.find((u) => u.id === userId)?.password
+}
+
+export function updatePassword(userId: string, newPassword: string): void {
+  const user = MOCK_USERS.find((u) => u.id === userId)
+  if (user) user.password = newPassword
+}
+
+export function addUser(user: MockUser | User & { password: string }): void {
+  MOCK_USERS.push(user as MockUser)
+}
+
+export function stripPassword(user: MockUser): User {
+  return {
+    id: user.id,
+    uid: user.uid,
+    email: user.email,
+    phone: user.phone,
+    fullName: user.fullName,
+    avatar: user.avatar,
+    membership: user.membership,
+    createdAt: user.createdAt,
+  }
 }
 
 export function getUserFromStorage(): User | null {
   if (typeof window === "undefined") return null
   try {
-    const stored = localStorage.getItem(SESSION_USER_KEY)
+    const stored = localStorage.getItem(SESSION_USER_KEY) ?? sessionStorage.getItem(SESSION_USER_KEY)
     if (stored) {
       return JSON.parse(stored) as User
     }
   } catch {
     localStorage.removeItem(SESSION_USER_KEY)
+    sessionStorage.removeItem(SESSION_USER_KEY)
   }
   return null
 }
 
 export function updateUserInStorage(user: User): void {
   if (typeof window === "undefined") return
-  localStorage.setItem(SESSION_USER_KEY, JSON.stringify(user))
+  const key = localStorage.getItem(SESSION_USER_KEY) ? SESSION_USER_KEY : sessionStorage.getItem(SESSION_USER_KEY) ? SESSION_USER_KEY : null
+  if (!key) {
+    localStorage.setItem(SESSION_USER_KEY, JSON.stringify(user))
+    return
+  }
+  if (key === SESSION_USER_KEY) {
+    localStorage.setItem(key, JSON.stringify(user))
+  } else {
+    sessionStorage.setItem(key, JSON.stringify(user))
+  }
 }
-

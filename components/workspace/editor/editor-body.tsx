@@ -1,8 +1,16 @@
 "use client";
 
 import { useRef, useEffect } from "react";
+import { useEditor } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Image from "@tiptap/extension-image";
+import Placeholder from "@tiptap/extension-placeholder";
+import { Table, TableRow, TableCell, TableHeader } from "@tiptap/extension-table";
 import { useEditorStore } from "@/store/editorStore";
 import { useFileTreeStore } from "@/store/fileTreeStore";
+import { EditorReadonly } from "@/components/workspace/editor/editor-readonly";
+import { EditorTitle } from "@/components/workspace/editor/editor-title";
+import { EditorContentArea } from "@/components/workspace/editor/editor-content-area";
 
 interface EditorBodyProps {
   readOnly?: boolean
@@ -10,10 +18,20 @@ interface EditorBodyProps {
   externalContent?: string
 }
 
+const extensions = [
+  StarterKit.configure({
+    heading: { levels: [1, 2, 3] },
+  }),
+  Image,
+  Placeholder.configure({ placeholder: "开始写点什么..." }),
+  Table.configure({ resizable: true }),
+  TableRow,
+  TableCell,
+  TableHeader,
+];
+
 export function EditorBody({ readOnly, externalTitle, externalContent }: EditorBodyProps) {
-  const editorRef = useRef<HTMLDivElement>(null);
-  const titleRef = useRef<HTMLHeadingElement>(null);
-  const hasLoadedRef = useRef(false);
+  const isSettingContent = useRef(false);
   const content = useEditorStore((s) => s.content);
   const title = useEditorStore((s) => s.title);
   const setContent = useEditorStore((s) => s.setContent);
@@ -21,74 +39,48 @@ export function EditorBody({ readOnly, externalTitle, externalContent }: EditorB
   const saveNow = useEditorStore((s) => s.saveNow);
   const selectedNodeId = useFileTreeStore((s) => s.selectedNodeId);
 
-  useEffect(() => {
-    hasLoadedRef.current = false;
-  }, [selectedNodeId]);
+  const editor = useEditor({
+    extensions,
+    content: readOnly ? (externalContent ?? "") : content,
+    editable: !readOnly,
+    onUpdate: readOnly
+      ? undefined
+      : ({ editor: ed }) => {
+          if (isSettingContent.current) return;
+          setContent(ed.getHTML());
+        },
+  });
 
   useEffect(() => {
-    if (readOnly) return
-    if (editorRef.current && content && !hasLoadedRef.current) {
-      editorRef.current.innerHTML = content;
-      hasLoadedRef.current = true;
-    } else if (editorRef.current && !content && !hasLoadedRef.current) {
-      hasLoadedRef.current = true;
-    }
-  }, [content, selectedNodeId, readOnly]);
+    if (!editor || readOnly) return;
+    isSettingContent.current = true;
+    editor.commands.setContent(content);
+    requestAnimationFrame(() => {
+      isSettingContent.current = false;
+    });
+  }, [selectedNodeId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!editor || !readOnly || externalContent === undefined) return;
+    editor.commands.setContent(externalContent ?? "");
+  }, [externalContent, editor, readOnly]);
+
+  const handleTitleChange = (newTitle: string) => {
+    setTitle(newTitle);
+    saveNow();
+  };
 
   if (readOnly) {
     const displayTitle = (externalTitle ?? "").replace(/\.md$/, "");
-    const displayContent = externalContent ?? "";
-
-    return (
-      <div className="flex-1 overflow-y-auto" style={{ scrollbarGutter: "stable" }}>
-        <div className="mx-auto max-w-[800px] px-6 py-6">
-          <div className="editor-card p-10">
-            <h1 className="mb-6 text-4xl font-bold tracking-tight text-mint-text">
-              {displayTitle}
-            </h1>
-            <div
-              className="prose-custom min-h-[200px] text-mint-text pointer-events-none select-none"
-              data-editor-body="true"
-              dangerouslySetInnerHTML={{ __html: displayContent }}
-            />
-          </div>
-        </div>
-      </div>
-    );
+    return <EditorReadonly displayTitle={displayTitle} editor={editor} />;
   }
 
   return (
     <div className="flex-1 overflow-y-auto bg-mint-bg" style={{ scrollbarGutter: "stable" }}>
       <div className="mx-auto max-w-[800px] px-6 py-6">
         <div className="editor-card p-10">
-          <h1
-            ref={titleRef}
-            className="mb-6 cursor-text text-4xl font-bold tracking-tight text-mint-text outline-none transition-colors hover:text-mint-accent-light"
-            contentEditable
-            suppressContentEditableWarning
-            onBlur={(e) => {
-              const newTitle = e.currentTarget.textContent ?? title;
-              if (newTitle !== title) {
-                setTitle(newTitle);
-                saveNow();
-              }
-            }}
-          >
-            {title}
-          </h1>
-
-          <div
-            ref={editorRef}
-            className="prose-custom min-h-[400px] cursor-text text-mint-text outline-none"
-            data-editor-body="true"
-            contentEditable
-            suppressContentEditableWarning
-            onInput={() => {
-              if (editorRef.current) {
-                setContent(editorRef.current.innerHTML);
-              }
-            }}
-          />
+          <EditorTitle title={title} onTitleChange={handleTitleChange} />
+          <EditorContentArea editor={editor} />
         </div>
       </div>
     </div>

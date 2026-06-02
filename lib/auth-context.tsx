@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
+import { createContext, useContext, useState, useRef, useCallback, type ReactNode } from 'react'
 import type { User, RegisterPayload } from '@/types/auth'
 import {
   validateLogin,
@@ -20,7 +20,8 @@ interface AuthState {
 interface AuthContextValue extends AuthState {
   login: (email: string, password: string, rememberMe?: boolean) => Promise<{ success: boolean; error?: string }>
   register: (payload: RegisterPayload) => Promise<{ success: boolean; error?: string }>
-  logout: (clearAll?: boolean) => void
+  logout: () => void
+  logoutAndClear: () => void
   updateUser: (updates: Partial<User>) => void
   clearError: () => void
   authError: string | null
@@ -32,8 +33,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(() => getCurrentUser())
   const [isLoading, setIsLoading] = useState(false)
   const [authError, setAuthError] = useState<string | null>(null)
+  const isLoadingRef = useRef(false)
 
   const login = useCallback(async (email: string, password: string, rememberMe?: boolean) => {
+    if (isLoadingRef.current) return { success: false, error: '请勿重复提交' }
+    isLoadingRef.current = true
     setAuthError(null)
     setIsLoading(true)
     try {
@@ -51,11 +55,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAuthError(errorMsg)
       return { success: false, error: errorMsg }
     } finally {
+      isLoadingRef.current = false
       setIsLoading(false)
     }
   }, [])
 
   const register = useCallback(async (payload: RegisterPayload) => {
+    if (isLoadingRef.current) return { success: false, error: '请勿重复提交' }
+    isLoadingRef.current = true
     setAuthError(null)
     setIsLoading(true)
     try {
@@ -73,17 +80,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAuthError(errorMsg)
       return { success: false, error: errorMsg }
     } finally {
+      isLoadingRef.current = false
       setIsLoading(false)
     }
   }, [])
 
-  const logout = useCallback((clearAll = false) => {
+  const logout = useCallback(() => {
     setAuthError(null)
-    if (clearAll) {
-      clearAllUserData()
-    } else {
-      clearSession()
-    }
+    clearSession()
+    setUser(null)
+  }, [])
+
+  const logoutAndClear = useCallback(() => {
+    setAuthError(null)
+    clearAllUserData()
     setUser(null)
   }, [])
 
@@ -105,6 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     login,
     register,
     logout,
+    logoutAndClear,
     updateUser,
     clearError,
     authError,

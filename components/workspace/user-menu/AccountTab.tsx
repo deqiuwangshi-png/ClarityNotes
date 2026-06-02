@@ -3,7 +3,7 @@
 import { useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { validateOldPassword } from "@/lib/services/userService";
+import { validateOldPassword, updatePassword } from "@/lib/services/userService";
 import {
   validateFullName,
   validatePhone,
@@ -23,7 +23,7 @@ function maskPhone(phone: string): string {
 }
 
 export function AccountTab() {
-  const { user, updateUser, logout } = useAuth();
+  const { user, updateUser, logoutAndClear } = useAuth();
   const router = useRouter();
 
   const [displayName, setDisplayName] = useState(user?.fullName ?? "临时账号");
@@ -158,9 +158,10 @@ export function AccountTab() {
   };
 
   const handleSavePassword = () => {
+    if (!user) return;
     let hasError = false;
 
-    if (!user || !validateOldPassword(user, oldPassword)) {
+    if (!validateOldPassword(user, oldPassword)) {
       setOldPasswordError("原密码不正确");
       hasError = true;
     } else {
@@ -185,7 +186,7 @@ export function AccountTab() {
 
     if (hasError) return;
 
-    updateUser({ password: newPassword });
+    updatePassword(user.id, newPassword);
     setPasswordModalOpen(false);
     triggerToast("密码修改成功");
   };
@@ -197,7 +198,7 @@ export function AccountTab() {
   };
 
   const handleDeleteAccount = () => {
-    logout(true);
+    logoutAndClear();
     router.push("/");
   };
 
