@@ -1,10 +1,9 @@
 import type { User, RegisterPayload, AuthResponse } from "@/types/auth"
-import { MOCK_USERS, findUserByEmail, addUser } from "@/data/mockUsers"
-
-const SESSION_KEY = 'claritynotes_auth_user'
+import { userRepo, sessionRepo } from "@/repositories"
+import { generateUid } from "@/utils/uid"
 
 export function validateLogin(email: string, password: string): AuthResponse {
-  const user = MOCK_USERS.find(
+  const user = userRepo.MOCK_USERS.find(
     (u) => u.email === email && u.password === password,
   )
   if (user) {
@@ -14,12 +13,13 @@ export function validateLogin(email: string, password: string): AuthResponse {
 }
 
 export function validateRegister(payload: RegisterPayload): AuthResponse {
-  const existing = findUserByEmail(payload.email)
+  const existing = userRepo.findUserByEmail(payload.email)
   if (existing) {
     return { success: false, error: "该邮箱已被注册" }
   }
   const newUser: User = {
     id: `user-${Date.now()}`,
+    uid: generateUid(),
     email: payload.email,
     password: payload.password,
     fullName: payload.fullName,
@@ -27,33 +27,18 @@ export function validateRegister(payload: RegisterPayload): AuthResponse {
     membership: "free",
     createdAt: new Date().toISOString(),
   }
-  addUser(newUser)
+  userRepo.addUser(newUser)
   return { success: true, user: newUser }
 }
 
 export function createSession(user: User, rememberMe?: boolean): void {
-  if (typeof window === 'undefined') return
-  localStorage.setItem(SESSION_KEY, JSON.stringify(user))
-  if (!rememberMe) {
-    sessionStorage.setItem(SESSION_KEY, 'temp')
-  }
+  sessionRepo.createSession(user, rememberMe)
 }
 
 export function clearSession(): void {
-  if (typeof window === 'undefined') return
-  localStorage.removeItem(SESSION_KEY)
-  sessionStorage.removeItem(SESSION_KEY)
+  sessionRepo.clearSession()
 }
 
 export function getCurrentUser(): User | null {
-  if (typeof window === 'undefined') return null
-  try {
-    const stored = localStorage.getItem(SESSION_KEY)
-    if (stored) {
-      return JSON.parse(stored) as User
-    }
-  } catch {
-    localStorage.removeItem(SESSION_KEY)
-  }
-  return null
+  return sessionRepo.getCurrentUser()
 }

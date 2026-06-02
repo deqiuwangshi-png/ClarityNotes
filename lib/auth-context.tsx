@@ -9,6 +9,7 @@ import {
   clearSession,
   getCurrentUser,
 } from '@/lib/services/auth-service'
+import { updateUserInfo, clearAllUserData } from '@/lib/services/userService'
 
 interface AuthState {
   user: User | null
@@ -19,7 +20,8 @@ interface AuthState {
 interface AuthContextValue extends AuthState {
   login: (email: string, password: string, rememberMe?: boolean) => Promise<{ success: boolean; error?: string }>
   register: (payload: RegisterPayload) => Promise<{ success: boolean; error?: string }>
-  logout: () => void
+  logout: (clearAll?: boolean) => void
+  updateUser: (updates: Partial<User>) => void
   clearError: () => void
   authError: string | null
 }
@@ -75,10 +77,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const logout = useCallback(() => {
+  const logout = useCallback((clearAll = false) => {
     setAuthError(null)
-    clearSession()
+    if (clearAll) {
+      clearAllUserData()
+    } else {
+      clearSession()
+    }
     setUser(null)
+  }, [])
+
+  const updateUser = useCallback((updates: Partial<User>) => {
+    setUser((prev) => {
+      if (!prev) return prev
+      return updateUserInfo(prev, updates)
+    })
   }, [])
 
   const clearError = useCallback(() => {
@@ -92,6 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     login,
     register,
     logout,
+    updateUser,
     clearError,
     authError,
   }

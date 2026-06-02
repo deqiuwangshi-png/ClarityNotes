@@ -7,4 +7,5 @@ export type {
   FolderItem,
   TrashItemData,
   EditorMenuAction,
+  SearchResultItem,
 } from "@/types/fileTree"

@@ -1,38 +1,37 @@
 "use client";
 
-import type { FolderItem } from "@/types/workspace";
+import type { BreadcrumbItem, FolderItem } from "@/types/workspace";
+import { useSidebarLayout } from "@/components/workspace/layout/SidebarLayout";
+import { Breadcrumb } from "@/components/workspace/common/Breadcrumb";
 import { FolderListHeader } from "@/components/workspace/folder/folder-list-header";
 import { FolderListItem } from "@/components/workspace/folder/folder-list-item";
 
 interface FolderViewProps {
   folderName: string;
-  breadcrumbPaths: { id: string; name: string }[];
+  breadcrumbPaths: BreadcrumbItem[];
   items: FolderItem[];
   onBreadcrumbClick: (id: string) => void;
   onItemClick: (itemId: string) => void;
-  onItemMore: (itemId: string) => void;
 }
 
-export function FolderView({ folderName, breadcrumbPaths, items, onBreadcrumbClick, onItemClick, onItemMore }: FolderViewProps) {
+export function FolderView({ folderName, breadcrumbPaths, items, onBreadcrumbClick, onItemClick }: FolderViewProps) {
+  const { collapsed } = useSidebarLayout();
+
   return (
     <div className="relative grow overflow-y-auto scroll-smooth bg-mint-bg" style={{ scrollbarGutter: "stable" }}>
-      <div className="relative mx-auto mb-16 mt-6 max-w-[960px] px-6 pb-12 pt-6 md:px-10 md:pt-8">
-        <nav className="mb-6 flex items-center gap-1 text-sm text-[#6B7280]">
-          {breadcrumbPaths.map((item) => (
-            <span key={item.id} className="flex items-center gap-1">
-              <button className="rounded px-1 py-0.5 transition hover:bg-mint-hover/70 hover:text-mint-accent-light" type="button" onClick={() => onBreadcrumbClick(item.id)}>
-                {item.name}
-              </button>
-            </span>
-          ))}
-        </nav>
-        <header className="mb-6">
+      {!collapsed && (
+        <div className="px-6 pt-6">
+          <Breadcrumb paths={breadcrumbPaths} onNavigate={onBreadcrumbClick} />
+        </div>
+      )}
+      <div className="relative mx-auto mb-16 max-w-[960px] px-6 pb-12 md:px-10 md:pt-8">
+        <header className="mb-6 mt-2">
           <h1 className="text-3xl font-bold tracking-tight text-mint-text">{folderName}</h1>
         </header>
         <FolderListHeader />
         <div className="space-y-1">
           {items.map((item) => (
-            <FolderListItem key={item.id} item={item} onClick={onItemClick} onMore={onItemMore} />
+            <FolderListItem key={item.id} item={item} onClick={onItemClick} />
           ))}
         </div>
       </div>

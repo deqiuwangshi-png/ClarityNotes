@@ -21,7 +21,7 @@ export function EditorHeader({
   onMenuAction,
 }: EditorHeaderProps) {
   return (
-    <header className="z-10 flex h-14 shrink-0 items-center justify-between border-b border-mint-border/30 bg-white px-6">
+    <header className="z-10 flex h-14 shrink-0 items-center justify-between border-b border-mint-border/20 bg-mint-bg px-6">
       <div className="flex min-w-0 items-center gap-3">
         <Breadcrumb paths={breadcrumbPaths} onNavigate={onBreadcrumbClick} />
         <SaveStatusBadge isSaved={isSaved} />

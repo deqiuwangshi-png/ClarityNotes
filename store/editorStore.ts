@@ -1,6 +1,7 @@
 import { create } from "zustand"
 import { countWords } from "@/utils/editor"
 import { saveContent, updateTitle } from "@/lib/services/editorService"
+import { findNode } from "@/lib/services/fileTreeService"
 import { useFileTreeStore } from "@/store/fileTreeStore"
 
 const AUTO_SAVE_DELAY = 2000
@@ -13,6 +14,7 @@ interface EditorState {
   isDirty: boolean
 
   loadFromNode: (nodeId: string, nodeContent?: string, nodeTitle?: string) => void
+  loadEditorFromTree: (nodeId: string) => void
   setContent: (html: string) => void
   setTitle: (newTitle: string) => void
   saveNow: () => void
@@ -63,6 +65,20 @@ export const useEditorStore = create<EditorState>()((set, get) => {
       set({
         content,
         title: nodeTitle ?? "",
+        wordCount: countWords(content),
+        isSaved: true,
+        isDirty: false,
+      })
+    },
+
+    loadEditorFromTree: (nodeId: string) => {
+      const tree = useFileTreeStore.getState().tree
+      const node = findNode(tree, nodeId)
+      if (saveTimer !== null) clearTimeout(saveTimer)
+      const content = node?.content ?? ""
+      set({
+        content,
+        title: node?.name ?? "",
         wordCount: countWords(content),
         isSaved: true,
         isDirty: false,

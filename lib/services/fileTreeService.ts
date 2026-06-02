@@ -139,6 +139,7 @@ export function moveToTrash(
     lastModified: deletedNode.updatedAt ?? now,
     createdAt: deletedNode.createdAt ?? now,
     ...(count !== undefined ? { count } : {}),
+    ...(deletedNode.type === "file" ? { content: deletedNode.content, wordCount: deletedNode.wordCount } : {}),
   }
 
   return { newTree, trashItem }

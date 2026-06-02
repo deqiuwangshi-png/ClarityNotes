@@ -1,6 +1,6 @@
 import { create } from "zustand"
 import type { TrashItemData, TreeNode } from "@/types/fileTree"
-import { getTrash } from "@/data/mockTrash"
+import { trashRepo } from "@/repositories"
 import {
   restoreItem,
   deletePermanently as deletePermanentlyService,
@@ -28,12 +28,12 @@ interface TrashState {
 }
 
 export const useTrashStore = create<TrashState>()((set, get) => ({
-  items: getTrash(),
+  items: trashRepo.getTrash(),
   isBatchMode: false,
   selectedIds: new Set<string>(),
 
   refresh: () => {
-    set({ items: getTrash() })
+    set({ items: trashRepo.getTrash() })
   },
 
   enterBatchMode: (initialItemId?: string) => {
@@ -75,18 +75,18 @@ export const useTrashStore = create<TrashState>()((set, get) => ({
     const result = restoreItem(item, fileTree)
     if ("error" in result) return null
 
-    set({ items: getTrash() })
+    set({ items: trashRepo.getTrash() })
     return { newTree: result.newTree }
   },
 
   deletePermanently: (itemId: string) => {
     deletePermanentlyService(itemId)
-    set({ items: getTrash() })
+    set({ items: trashRepo.getTrash() })
   },
 
   emptyTrash: () => {
     emptyTrashService()
-    set({ items: getTrash() })
+    set({ items: trashRepo.getTrash() })
   },
 
   batchRestore: (fileTree: TreeNode[]) => {
@@ -95,13 +95,13 @@ export const useTrashStore = create<TrashState>()((set, get) => ({
     if (selectedItems.length === 0) return null
 
     const result = batchRestoreService(selectedItems, fileTree)
-    set({ items: getTrash(), isBatchMode: false, selectedIds: new Set<string>() })
+    set({ items: trashRepo.getTrash(), isBatchMode: false, selectedIds: new Set<string>() })
     return { newTree: result.newTree }
   },
 
   batchDelete: () => {
     const { selectedIds } = get()
     batchDeleteService(Array.from(selectedIds))
-    set({ items: getTrash(), isBatchMode: false, selectedIds: new Set<string>() })
+    set({ items: trashRepo.getTrash(), isBatchMode: false, selectedIds: new Set<string>() })
   },
 }))

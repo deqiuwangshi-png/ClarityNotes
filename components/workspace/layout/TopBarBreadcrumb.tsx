@@ -1,11 +1,8 @@
 "use client";
 
+import { useCallback } from "react";
+import { useFileTreeStore, useBreadcrumb } from "@/store/fileTreeStore";
 import type { BreadcrumbItem } from "@/types/workspace";
-
-interface BreadcrumbProps {
-  paths: BreadcrumbItem[];
-  onNavigate: (id: string) => void;
-}
 
 function BreadcrumbItemView({ item, onNavigate }: { item: BreadcrumbItem; onNavigate: (id: string) => void }) {
   if (item.isLast) {
@@ -21,17 +18,25 @@ function BreadcrumbItemView({ item, onNavigate }: { item: BreadcrumbItem; onNavi
   )
 }
 
-export function Breadcrumb({ paths, onNavigate }: BreadcrumbProps) {
+export function TopBarBreadcrumb() {
+  const breadcrumb = useBreadcrumb();
+  const selectNode = useFileTreeStore((s) => s.selectNode);
+
+  const handleNavigate = useCallback(
+    (id: string) => selectNode(id),
+    [selectNode],
+  );
+
   const displayPaths: BreadcrumbItem[] =
-    paths.length > 0
-      ? paths
-      : [{ id: "root", name: "我的文档", isLast: true }]
+    breadcrumb.length > 0
+      ? breadcrumb
+      : [{ id: "root", name: "我的文档", isLast: true }];
 
   return (
     <nav className="flex min-w-0 items-center gap-1.5 text-[13px] text-mint-muted">
       {displayPaths.map((item) => (
         <span key={item.id} className="flex min-w-0 items-center gap-1.5">
-          <BreadcrumbItemView item={item} onNavigate={onNavigate} />
+          <BreadcrumbItemView item={item} onNavigate={handleNavigate} />
         </span>
       ))}
     </nav>

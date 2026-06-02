@@ -1,5 +1,5 @@
 import type { TreeNode, TrashItemData } from "@/types/fileTree"
-import { removeFromTrash, clearTrash as clearTrashData } from "@/data/mockTrash"
+import { trashRepo } from "@/repositories"
 import { generateId } from "@/utils/idGenerator"
 import { formatTimestamp } from "@/utils/dateFormatter"
 
@@ -31,17 +31,17 @@ export function restoreItem(
   parent.children.push(restoredNode)
   parent.expanded = true
 
-  removeFromTrash(trashItem.id)
+  trashRepo.removeFromTrash(trashItem.id)
 
   return { newTree, restoredId: restoredNode.id }
 }
 
 export function deletePermanently(trashId: string): void {
-  removeFromTrash(trashId)
+  trashRepo.removeFromTrash(trashId)
 }
 
 export function emptyTrash(): void {
-  clearTrashData()
+  trashRepo.clearTrash()
 }
 
 export function batchRestore(
@@ -64,7 +64,7 @@ export function batchRestore(
 
 export function batchDelete(ids: string[]): void {
   for (const id of ids) {
-    removeFromTrash(id)
+    trashRepo.removeFromTrash(id)
   }
 }
 

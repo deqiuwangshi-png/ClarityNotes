@@ -1,7 +1,6 @@
 import { create } from "zustand"
 import type { TreeNode, BreadcrumbItem, DocumentInfo, FolderItem } from "@/types/fileTree"
-import { getTree, setTree as saveTree } from "@/data/mockFileTree"
-import { addToTrash } from "@/data/mockTrash"
+import { fileTreeRepo, trashRepo } from "@/repositories"
 import {
   findNode,
   getSiblingNames,
@@ -34,7 +33,7 @@ interface FileTreeState {
 }
 
 export const useFileTreeStore = create<FileTreeState>()((set, get) => ({
-  tree: getTree(),
+  tree: fileTreeRepo.getTree(),
   selectedNodeId: null,
   expandedIds: new Set<string>(),
   currentView: "folder",
@@ -67,7 +66,7 @@ export const useFileTreeStore = create<FileTreeState>()((set, get) => ({
     const result = createNode(tree, parentId, "file")
     if ("error" in result) return
     const { newTree, createdNode } = result
-    saveTree(newTree)
+    fileTreeRepo.setTree(newTree)
     set({ tree: newTree, selectedNodeId: createdNode.id, creatingNodeId: createdNode.id, currentView: "editor" })
   },
 
@@ -76,7 +75,7 @@ export const useFileTreeStore = create<FileTreeState>()((set, get) => ({
     const result = createNode(tree, parentId, "folder")
     if ("error" in result) return
     const { newTree, createdNode } = result
-    saveTree(newTree)
+    fileTreeRepo.setTree(newTree)
     set({ tree: newTree, selectedNodeId: createdNode.id, creatingNodeId: createdNode.id, currentView: "folder" })
   },
 
@@ -90,7 +89,7 @@ export const useFileTreeStore = create<FileTreeState>()((set, get) => ({
     const { tree } = get()
     const result = renameNodeService(tree, nodeId, newName)
     if ("error" in result) return
-    saveTree(result.newTree)
+    fileTreeRepo.setTree(result.newTree)
     set({ tree: result.newTree, creatingNodeId: null })
   },
 
@@ -98,7 +97,7 @@ export const useFileTreeStore = create<FileTreeState>()((set, get) => ({
     const { tree, selectedNodeId } = get()
     const deleteResult = deleteNodeService(tree, nodeId)
     if ("error" in deleteResult) return
-    saveTree(deleteResult.newTree)
+    fileTreeRepo.setTree(deleteResult.newTree)
     set({
       tree: deleteResult.newTree,
       creatingNodeId: null,
@@ -111,8 +110,8 @@ export const useFileTreeStore = create<FileTreeState>()((set, get) => ({
     const result = moveToTrash(tree, nodeId)
     if ("error" in result) return
     const { newTree, trashItem } = result
-    addToTrash(trashItem)
-    saveTree(newTree)
+    trashRepo.addToTrash(trashItem)
+    fileTreeRepo.setTree(newTree)
     set({
       tree: newTree,
       ...(selectedNodeId === nodeId ? { selectedNodeId: tree[0]?.id ?? null, currentView: "folder" as const } : {}),
@@ -120,7 +119,7 @@ export const useFileTreeStore = create<FileTreeState>()((set, get) => ({
   },
 
   setTree: (tree: TreeNode[]) => {
-    saveTree(tree)
+    fileTreeRepo.setTree(tree)
     set({ tree })
   },
 
@@ -128,7 +127,7 @@ export const useFileTreeStore = create<FileTreeState>()((set, get) => ({
     const { tree } = get()
     const result = trashStoreRestore(nodeId, tree)
     if (!result) return
-    saveTree(result.newTree)
+    fileTreeRepo.setTree(result.newTree)
     set({ tree: result.newTree, selectedNodeId: result.newTree[0]?.id ?? null, currentView: "folder" })
   },
 }))

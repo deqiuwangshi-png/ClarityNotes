@@ -47,6 +47,13 @@ export interface FolderItem {
   createdAt: string
 }
 
+export interface SearchResultItem {
+  nodeId: string
+  title: string
+  path: BreadcrumbItem[]
+  snippet: string
+}
+
 export interface TrashItemData {
   id: string
   type: "folder" | "file"
@@ -54,6 +61,8 @@ export interface TrashItemData {
   count?: number
   lastModified: string
   createdAt: string
+  content?: string
+  wordCount?: number
 }
 
 export type EditorMenuAction =

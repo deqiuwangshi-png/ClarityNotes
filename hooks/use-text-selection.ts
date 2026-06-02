@@ -36,6 +36,18 @@ export function useTextSelection(): UseTextSelectionReturn {
 
       if (text.length > 0 && selection?.rangeCount) {
         const range = selection.getRangeAt(0);
+        const container = range.commonAncestorContainer;
+        const element = container.nodeType === Node.TEXT_NODE
+          ? (container as Text).parentElement
+          : container as Element;
+
+        if (!element || !element.closest("[data-editor-body]")) {
+          setVisible(false);
+          setPosition(null);
+          setSelectedText("");
+          return;
+        }
+
         const rect = range.getBoundingClientRect();
 
         const fitsAbove = rect.top > BUBBLE_HEIGHT + BUBBLE_MARGIN * 2;

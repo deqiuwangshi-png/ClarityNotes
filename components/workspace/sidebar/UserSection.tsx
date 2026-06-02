@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { UserMenu, type UserMenuItem } from "@/components/workspace/user-menu/UserMenu";
@@ -36,7 +37,7 @@ export function UserSection({ user, onToggleSidebar }: UserSectionProps) {
     switch (item.label) {
       case "账号设置": return { ...item, onClick: () => setSettingsOpen(true) };
       case "消息通知": return { ...item, onClick: () => console.log("【消息通知】") };
-      case "产品反馈": return { ...item, onClick: () => console.log("【产品反馈】") };
+      case "产品反馈": return { ...item, onClick: () => { window.open(process.env.NEXT_PUBLIC_FEISHU_FORM_URL ?? "https://my.feishu.cn/share/base/form/shrcnOikCJSkmGhpqJdD1XKwtFb", "_blank"); } };
       case "更新公告": return { ...item, onClick: () => console.log("【更新公告】") };
       case "会员订阅": return { ...item, onClick: () => setMembershipOpen(true) };
       case "退出登录": return { ...item, onClick: handleLogout };
@@ -62,8 +63,14 @@ export function UserSection({ user, onToggleSidebar }: UserSectionProps) {
           <span className="material-symbols-outlined text-[18px]">menu</span>
         </button>
       </div>
-      <AccountSettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
-      <MembershipDialog open={membershipOpen} onClose={() => setMembershipOpen(false)} />
+      {createPortal(
+        <AccountSettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />,
+        document.body,
+      )}
+      {createPortal(
+        <MembershipDialog open={membershipOpen} onClose={() => setMembershipOpen(false)} />,
+        document.body,
+      )}
     </>
   );
 }
