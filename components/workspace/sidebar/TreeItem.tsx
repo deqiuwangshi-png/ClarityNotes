@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback, memo } from "react";
 import type { TreeNode } from "@/types/fileTree";
 import { useFileTreeStore } from "@/store/fileTreeStore";
+import { useUiStore } from "@/store/uiStore";
 import { TreeItemMenu } from "@/components/workspace/sidebar/TreeItemMenu";
 
 interface TreeItemProps {
@@ -68,6 +69,7 @@ const TreeItem = memo(function TreeItem({
   const deleteNode = useFileTreeStore((s) => s.deleteNode);
   const cancelCreate = useFileTreeStore((s) => s.cancelCreate);
   const validateCreateName = useFileTreeStore((s) => s.validateCreateName);
+  const openConfirm = useUiStore((s) => s.openConfirm);
 
   const isCreating = creatingNodeId === node.id;
 
@@ -108,6 +110,18 @@ const TreeItem = memo(function TreeItem({
   }, [errorMsg]);
 
   const inputBorder = errorMsg ? "border-red-400" : "border-mint-accent";
+
+  const handleDelete = useCallback(async () => {
+    const confirmed = await openConfirm({
+      title: "删除确认",
+      message: `确定要删除"${node.name}"吗？删除后将移入回收站。`,
+      confirmLabel: "删除",
+      variant: "danger",
+    });
+    if (confirmed) {
+      deleteNode(node.id);
+    }
+  }, [node, openConfirm, deleteNode]);
 
   return (
     <>
@@ -161,7 +175,7 @@ const TreeItem = memo(function TreeItem({
           onCreateFolder={() => createFolder(node.id)}
           onCreateFile={() => createFile(node.id)}
           onRenameStart={() => { setRenaming(true); setRenameValue(node.name); setErrorMsg(null); }}
-          onDelete={() => deleteNode(node.id)}
+          onDelete={handleDelete}
         />
       </div>
 

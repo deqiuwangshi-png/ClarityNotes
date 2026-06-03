@@ -9,7 +9,6 @@ import { AccountSettingsDialog } from "@/components/workspace/user-menu/AccountS
 import { MembershipDialog } from "@/components/workspace/user-menu/MembershipDialog";
 
 interface UserSectionProps {
-  user: { displayName: string; email: string; avatarInitial: string };
   onToggleSidebar: () => void;
 }
 
@@ -22,14 +21,18 @@ const MENU_ITEMS: Omit<UserMenuItem, "onClick">[] = [
   { icon: "logout", label: "退出登录", danger: true, dividerAbove: true },
 ];
 
-export function UserSection({ user, onToggleSidebar }: UserSectionProps) {
+export function UserSection({ onToggleSidebar }: UserSectionProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [membershipOpen, setMembershipOpen] = useState(false);
   const router = useRouter();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
 
-  const handleLogout = useCallback(() => {
-    logout();
+  const displayName = user?.fullName ?? "用户";
+  const displayEmail = user?.email ?? "";
+  const avatarChar = user?.avatar ?? displayName.charAt(0);
+
+  const handleLogout = useCallback(async () => {
+    await logout();
     router.push("/login");
   }, [logout, router]);
 
@@ -50,9 +53,9 @@ export function UserSection({ user, onToggleSidebar }: UserSectionProps) {
       <div className="flex w-full items-center justify-between">
         <UserMenu
           items={menuItems}
-          displayName={user.displayName}
-          displayEmail={user.email}
-          avatarChar={user.avatarInitial}
+          displayName={displayName}
+          displayEmail={displayEmail}
+          avatarChar={avatarChar}
         />
         <button
           className="flex size-8 shrink-0 items-center justify-center rounded-lg text-mint-muted transition hover:bg-mint-border/30 hover:text-mint-accent ml-1 cursor-pointer"

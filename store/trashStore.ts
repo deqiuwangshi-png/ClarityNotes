@@ -1,39 +1,49 @@
 import { create } from "zustand"
-import type { TrashItemData, TreeNode } from "@/types/fileTree"
+import type { TrashItemData } from "@/types/fileTree"
 import { trashRepo } from "@/repositories"
-import {
-  restoreItem,
-  deletePermanently as deletePermanentlyService,
-  emptyTrash as emptyTrashService,
-  batchRestore as batchRestoreService,
-  batchDelete as batchDeleteService,
-} from "@/lib/services/trashService"
+import { useFileTreeStore } from "@/store/fileTreeStore"
+import { formatTimestamp } from "@/utils/dateFormatter"
 
 interface TrashState {
   items: TrashItemData[]
   isBatchMode: boolean
   selectedIds: Set<string>
+  loading: boolean
+  error: string | null
 
-  refresh: () => void
+  loadTrash: () => Promise<void>
   enterBatchMode: (initialItemId?: string) => void
   exitBatchMode: () => void
   toggleSelectItem: (itemId: string) => void
   toggleSelectAll: () => void
 
-  restoreItem: (itemId: string, fileTree: TreeNode[]) => { newTree: TreeNode[]; restoredId?: string } | null
-  deletePermanently: (itemId: string) => void
-  emptyTrash: () => void
-  batchRestore: (fileTree: TreeNode[]) => { newTree: TreeNode[]; restoredIds?: string[] } | null
-  batchDelete: () => void
+  restoreItem: (itemId: string) => Promise<void>
+  deletePermanently: (itemId: string) => Promise<void>
+  emptyTrash: () => Promise<void>
+  batchRestore: () => Promise<void>
+  batchDelete: () => Promise<void>
 }
 
 export const useTrashStore = create<TrashState>()((set, get) => ({
-  items: trashRepo.getTrash(),
+  items: [],
   isBatchMode: false,
   selectedIds: new Set<string>(),
+  loading: true,
+  error: null,
 
-  refresh: () => {
-    set({ items: trashRepo.getTrash() })
+  loadTrash: async () => {
+    set({ loading: true, error: null })
+    try {
+      const rawItems = await trashRepo.getTrash()
+      const items = rawItems.map((item) => ({
+        ...item,
+        lastModified: formatTimestamp(item.lastModified),
+        createdAt: formatTimestamp(item.createdAt),
+      }))
+      set({ items, loading: false })
+    } catch (err) {
+      set({ error: (err as Error).message, loading: false })
+    }
   },
 
   enterBatchMode: (initialItemId?: string) => {
@@ -48,11 +58,7 @@ export const useTrashStore = create<TrashState>()((set, get) => ({
   toggleSelectItem: (itemId: string) => {
     set((state) => {
       const next = new Set(state.selectedIds)
-      if (next.has(itemId)) {
-        next.delete(itemId)
-      } else {
-        next.add(itemId)
-      }
+      if (next.has(itemId)) { next.delete(itemId) } else { next.add(itemId) }
       return { selectedIds: next }
     })
   },
@@ -67,41 +73,64 @@ export const useTrashStore = create<TrashState>()((set, get) => ({
     })
   },
 
-  restoreItem: (itemId: string, fileTree: TreeNode[]) => {
-    const { items } = get()
-    const item = items.find((i) => i.id === itemId)
-    if (!item) return null
-
-    const result = restoreItem(item, fileTree)
-    if ("error" in result) return null
-
-    set({ items: trashRepo.getTrash() })
-    return { newTree: result.newTree, restoredId: result.restoredId }
+  restoreItem: async (itemId: string) => {
+    set((state) => ({ items: state.items.filter((i) => i.id !== itemId) }))
+    try {
+      await trashRepo.restoreItem(itemId)
+      await useFileTreeStore.getState().loadTree()
+    } catch {
+      get().loadTrash()
+    }
   },
 
-  deletePermanently: (itemId: string) => {
-    deletePermanentlyService(itemId)
-    set({ items: trashRepo.getTrash() })
+  deletePermanently: async (itemId: string) => {
+    set((state) => ({ items: state.items.filter((i) => i.id !== itemId) }))
+    try {
+      await trashRepo.removeItem(itemId)
+    } catch {
+      get().loadTrash()
+    }
   },
 
-  emptyTrash: () => {
-    emptyTrashService()
-    set({ items: trashRepo.getTrash() })
+  emptyTrash: async () => {
+    set({ items: [] })
+    try {
+      await trashRepo.clearTrash()
+    } catch {
+      get().loadTrash()
+    }
   },
 
-  batchRestore: (fileTree: TreeNode[]) => {
-    const { items, selectedIds } = get()
-    const selectedItems = items.filter((i) => selectedIds.has(i.id))
-    if (selectedItems.length === 0) return null
-
-    const result = batchRestoreService(selectedItems, fileTree)
-    set({ items: trashRepo.getTrash(), isBatchMode: false, selectedIds: new Set<string>() })
-    return { newTree: result.newTree, restoredIds: result.restoredIds }
-  },
-
-  batchDelete: () => {
+  batchRestore: async () => {
     const { selectedIds } = get()
-    batchDeleteService(Array.from(selectedIds))
-    set({ items: trashRepo.getTrash(), isBatchMode: false, selectedIds: new Set<string>() })
+    set((state) => ({
+      items: state.items.filter((i) => !selectedIds.has(i.id)),
+      isBatchMode: false,
+      selectedIds: new Set<string>(),
+    }))
+    try {
+      await Promise.all(
+        Array.from(selectedIds).map((id) => trashRepo.restoreItem(id))
+      )
+      await useFileTreeStore.getState().loadTree()
+    } catch {
+      get().loadTrash()
+    }
+  },
+
+  batchDelete: async () => {
+    const { selectedIds } = get()
+    set((state) => ({
+      items: state.items.filter((i) => !selectedIds.has(i.id)),
+      isBatchMode: false,
+      selectedIds: new Set<string>(),
+    }))
+    try {
+      await Promise.all(
+        Array.from(selectedIds).map((id) => trashRepo.removeItem(id))
+      )
+    } catch {
+      get().loadTrash()
+    }
   },
 }))

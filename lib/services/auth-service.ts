@@ -12,6 +12,7 @@ function toSafeUser(user: User & { password: string }): User {
     avatar: user.avatar,
     membership: user.membership,
     createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
   }
 }
 
@@ -37,6 +38,7 @@ export function validateRegister(payload: RegisterPayload): AuthResponse {
     avatar: payload.fullName.charAt(0),
     membership: "free",
     createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   }
   userRepo.addUser(newUser)
   return { success: true, user: toSafeUser(newUser) }

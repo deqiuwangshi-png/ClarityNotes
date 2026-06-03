@@ -1,40 +1,15 @@
-import type { TreeNode, DocNode } from "@/types/fileTree"
-import { findNode } from "@/lib/services/fileTreeService"
-import { formatTimestamp } from "@/utils/dateFormatter"
-import { validateName } from "@/utils/validator"
-import { getSiblingNames } from "@/lib/services/fileTreeService"
+import type { DocNode } from "@/types/fileTree"
+import { fileTreeRepo } from "@/repositories"
 
-export function saveContent(
-  tree: TreeNode[],
-  nodeId: string,
-  content: DocNode,
-  wordCount: number,
-): { tree: TreeNode[] } | { error: string } {
-  const newTree = structuredClone(tree)
-  const node = findNode(newTree, nodeId)
-  if (!node) return { error: "节点不存在" }
-  if (node.type !== "file") return { error: "只能保存文件节点" }
-
-  node.content = content
-  node.wordCount = wordCount
-  node.updatedAt = formatTimestamp()
-  return { tree: newTree }
+export interface SaveDocumentParams {
+  nodeId: string
+  title: string
+  content: DocNode
+  wordCount: number
+  expectedUpdatedAt?: string
 }
 
-export function updateTitle(
-  tree: TreeNode[],
-  nodeId: string,
-  newTitle: string,
-): { tree: TreeNode[] } | { error: string } {
-  const siblingNames = getSiblingNames(tree, nodeId)
-  const error = validateName(newTitle, siblingNames)
-  if (error) return { error }
-
-  const newTree = structuredClone(tree)
-  const node = findNode(newTree, nodeId)
-  if (!node) return { error: "节点不存在" }
-
-  node.name = newTitle.trim()
-  node.updatedAt = formatTimestamp()
-  return { tree: newTree }
+export async function saveDocument(params: SaveDocumentParams): Promise<void> {
+  await fileTreeRepo.updateNode(params.nodeId, { name: params.title })
+  await fileTreeRepo.upsertDocument(params.nodeId, params.content, params.wordCount, params.expectedUpdatedAt)
 }

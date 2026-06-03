@@ -2,26 +2,34 @@ import type {
   IUserRepository,
   IFileTreeRepository,
   ITrashRepository,
-  IWorkspaceRepository,
   ISessionRepository,
+  ISupabaseAuthRepository,
+  FileTreeRow,
+  DocumentRow,
+  TrashRow,
+  FileTreeWithContent,
 } from "@/repositories/types"
 
 import { MockUserRepository } from "@/repositories/mock-users"
-import { MockFileTreeRepository } from "@/repositories/mock-fileTree"
-import { MockTrashRepository } from "@/repositories/mock-trash"
-import { MockWorkspaceRepository } from "@/repositories/mock-workspace"
+import { SupabaseFileTreeRepository } from "@/repositories/supabase-fileTree"
+import { SupabaseTrashRepository } from "@/repositories/supabase-trash"
 import { MockSessionRepository } from "@/repositories/mock-session"
+import { SupabaseAuthRepository } from "@/repositories/supabase-auth"
 
 export const userRepo: IUserRepository = new MockUserRepository()
-export const fileTreeRepo: IFileTreeRepository = new MockFileTreeRepository()
-export const trashRepo: ITrashRepository = new MockTrashRepository()
-export const workspaceRepo: IWorkspaceRepository = new MockWorkspaceRepository()
+export const fileTreeRepo: IFileTreeRepository = new SupabaseFileTreeRepository()
+export const trashRepo: ITrashRepository = new SupabaseTrashRepository()
 export const sessionRepo: ISessionRepository = new MockSessionRepository()
+export const supabaseAuthRepo: ISupabaseAuthRepository = new SupabaseAuthRepository()
 
 export type {
   IUserRepository,
   IFileTreeRepository,
   ITrashRepository,
-  IWorkspaceRepository,
   ISessionRepository,
+  ISupabaseAuthRepository,
+  FileTreeRow,
+  DocumentRow,
+  TrashRow,
+  FileTreeWithContent,
 }

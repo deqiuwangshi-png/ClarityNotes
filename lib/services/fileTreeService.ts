@@ -1,5 +1,5 @@
 import type { TreeNode, BreadcrumbItem, TrashItemData } from "@/types/fileTree"
-import { MAX_DEPTH, DEFAULT_NAME } from "@/constants/fileTree"
+import { MAX_DEPTH, DEFAULT_NAME, DEFAULT_ROOT_ID } from "@/constants/fileTree"
 import { generateId } from "@/utils/idGenerator"
 import { formatTimestamp } from "@/utils/dateFormatter"
 import { validateName, generateUniqueName } from "@/utils/validator"
@@ -167,4 +167,67 @@ function countDescendants(node: TreeNode): number {
     }
   }
   return count
+}
+
+export function getDefaultRoot(): TreeNode {
+  return {
+    id: DEFAULT_ROOT_ID,
+    name: "我的文档",
+    type: "folder",
+    level: 1,
+    expanded: true,
+    children: [],
+  }
+}
+
+/**
+ * 判断节点是否为唯一根节点。
+ * 单根树中根节点的充要条件：level === 1（由 DB trigger 强制 root.level=1, 非 root.level>=2）
+ */
+export function isRootNode(node: TreeNode): boolean {
+  return node.level === 1
+}
+
+export function addChildToTree(
+  nodes: TreeNode[],
+  parentId: string,
+  child: TreeNode,
+  replaceRoot: boolean,
+): TreeNode[] {
+  return nodes.map((n) => {
+    if (replaceRoot && n.id === DEFAULT_ROOT_ID && n.type === "folder") {
+      return {
+        id: parentId,
+        name: "我的文档",
+        type: "folder" as const,
+        level: 1,
+        expanded: true,
+        children: [child],
+      }
+    }
+    if (n.id === parentId && n.type === "folder") {
+      return {
+        ...n,
+        children: [...(n.children ?? []), child],
+      }
+    }
+    if (n.children) {
+      return {
+        ...n,
+        children: addChildToTree(n.children, parentId, child, replaceRoot),
+      }
+    }
+    return n
+  })
+}
+
+export function collectDescendantIds(nodes: TreeNode[], rootId: string): string[] {
+  const ids: string[] = [rootId]
+  const root = findNode(nodes, rootId)
+  if (root?.children) {
+    for (const child of root.children) {
+      ids.push(...collectDescendantIds(nodes, child.id))
+    }
+  }
+  return ids
 }

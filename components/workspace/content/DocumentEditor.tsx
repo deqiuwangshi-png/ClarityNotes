@@ -4,6 +4,7 @@ import type { BreadcrumbItem, DropdownMenuItem } from "@/types/fileTree";
 import { EditorHeader } from "@/components/workspace/editor/editor-header";
 import { EditorBody } from "@/components/workspace/editor/editor-body";
 import { useEditorStore } from "@/store/editorStore";
+import { useSidebarLayout } from "@/components/workspace/layout/SidebarLayout";
 
 interface DocumentEditorProps {
   breadcrumbPaths: BreadcrumbItem[];
@@ -14,16 +15,19 @@ interface DocumentEditorProps {
 
 export function DocumentEditor({ breadcrumbPaths, onBreadcrumbClick, onMenuAction, menuActions }: DocumentEditorProps) {
   const isSaved = useEditorStore((s) => s.isSaved);
+  const { collapsed } = useSidebarLayout();
 
   return (
     <div className="flex flex-col h-full bg-mint-bg">
-      <EditorHeader
-        breadcrumbPaths={breadcrumbPaths}
-        onBreadcrumbClick={onBreadcrumbClick}
-        isSaved={isSaved}
-        menuActions={menuActions}
-        onMenuAction={onMenuAction}
-      />
+      {!collapsed && (
+        <EditorHeader
+          breadcrumbPaths={breadcrumbPaths}
+          onBreadcrumbClick={onBreadcrumbClick}
+          isSaved={isSaved}
+          menuActions={menuActions}
+          onMenuAction={onMenuAction}
+        />
+      )}
       <EditorBody />
     </div>
   );

@@ -1,29 +1,19 @@
 'use client'
 
-import { createContext, useContext, useState, useRef, useCallback, type ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
 import type { User, RegisterPayload } from '@/types/auth'
-import {
-  validateLogin,
-  validateRegister,
-  createSession,
-  clearSession,
-  getCurrentUser,
-} from '@/lib/services/auth-service'
-import { updateUserInfo, clearAllUserData, validateOldPassword, updatePassword } from '@/lib/services/userService'
+import { supabaseAuthRepo } from '@/repositories'
 
-interface AuthState {
+interface AuthContextValue {
   user: User | null
   isLoading: boolean
   isAuthenticated: boolean
-}
-
-interface AuthContextValue extends AuthState {
   login: (email: string, password: string, rememberMe?: boolean) => Promise<{ success: boolean; error?: string }>
   register: (payload: RegisterPayload) => Promise<{ success: boolean; error?: string }>
-  logout: () => void
-  logoutAndClear: () => void
-  updateUser: (updates: Partial<User>) => void
-  changePassword: (oldPassword: string, newPassword: string) => boolean
+  logout: () => Promise<void>
+  logoutAndClear: () => Promise<void>
+  updateUser: (updates: Partial<User>) => Promise<void>
+  changePassword: (newPassword: string) => Promise<boolean>
   clearError: () => void
   authError: string | null
 }
@@ -31,90 +21,91 @@ interface AuthContextValue extends AuthState {
 const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(() => getCurrentUser())
-  const [isLoading, setIsLoading] = useState(false)
+  const [user, setUser] = useState<User | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
   const [authError, setAuthError] = useState<string | null>(null)
-  const isLoadingRef = useRef(false)
 
-  const login = useCallback(async (email: string, password: string, rememberMe?: boolean) => {
-    if (isLoadingRef.current) return { success: false, error: '请勿重复提交' }
-    isLoadingRef.current = true
+  useEffect(() => {
+    let mounted = true
+
+    supabaseAuthRepo.getSession().then((sessionUser) => {
+      if (mounted) {
+        setUser(sessionUser)
+        setIsLoading(false)
+      }
+    })
+
+    const unsubscribe = supabaseAuthRepo.onAuthStateChange((authUser) => {
+      if (mounted) {
+        setUser(authUser)
+      }
+    })
+
+    return () => {
+      mounted = false
+      unsubscribe()
+    }
+  }, [])
+
+  const login = useCallback(async (email: string, password: string) => {
     setAuthError(null)
     setIsLoading(true)
     try {
-      const result = await new Promise<{ success: boolean; error?: string; user?: User }>((resolve) => {
-        setTimeout(() => {
-          resolve(validateLogin(email, password))
-        }, 800)
-      })
-      if (result.success && result.user) {
+      const result = await supabaseAuthRepo.signIn(email, password)
+      if (result.success) {
         setUser(result.user)
-        createSession(result.user, rememberMe)
         return { success: true }
       }
-      const errorMsg = result.error || '登录失败，请重试'
-      setAuthError(errorMsg)
-      return { success: false, error: errorMsg }
+      setAuthError(result.error)
+      return { success: false, error: result.error }
     } finally {
-      isLoadingRef.current = false
       setIsLoading(false)
     }
   }, [])
 
   const register = useCallback(async (payload: RegisterPayload) => {
-    if (isLoadingRef.current) return { success: false, error: '请勿重复提交' }
-    isLoadingRef.current = true
     setAuthError(null)
     setIsLoading(true)
     try {
-      const result = await new Promise<{ success: boolean; error?: string; user?: User }>((resolve) => {
-        setTimeout(() => {
-          resolve(validateRegister(payload))
-        }, 800)
-      })
-      if (result.success && result.user) {
+      const result = await supabaseAuthRepo.signUp(payload)
+      if (result.success) {
         setUser(result.user)
-        createSession(result.user)
         return { success: true }
       }
-      const errorMsg = result.error || '注册失败，请重试'
-      setAuthError(errorMsg)
-      return { success: false, error: errorMsg }
+      setAuthError(result.error)
+      return { success: false, error: result.error }
     } finally {
-      isLoadingRef.current = false
       setIsLoading(false)
     }
   }, [])
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
     setAuthError(null)
-    clearSession()
+    await supabaseAuthRepo.signOut()
     setUser(null)
   }, [])
 
-  const logoutAndClear = useCallback(() => {
+  const logoutAndClear = useCallback(async () => {
     setAuthError(null)
-    clearAllUserData()
+    await supabaseAuthRepo.signOut()
     setUser(null)
-  }, [])
-
-  const updateUser = useCallback((updates: Partial<User>) => {
-    setUser((prev) => {
-      if (!prev) return prev
-      return updateUserInfo(prev, updates)
-    })
-  }, [])
-
-  const changePassword = useCallback((oldPassword: string, newPassword: string): boolean => {
-    const currentUser = getCurrentUser()
-    if (!currentUser) return false
-    if (!validateOldPassword(currentUser, oldPassword)) return false
-    updatePassword(currentUser.id, newPassword)
-    return true
   }, [])
 
   const clearError = useCallback(() => {
     setAuthError(null)
+  }, [])
+
+  const updateUser = useCallback(async (updates: Partial<User>) => {
+    setUser((prev) => {
+      if (!prev) return prev
+      return { ...prev, ...updates }
+    })
+    await supabaseAuthRepo.updateProfile(updates)
+  }, [])
+
+  const changePassword = useCallback(async (newPassword: string): Promise<boolean> => {
+    const result = await supabaseAuthRepo.updatePassword(newPassword)
+    return result.success
   }, [])
 
   const value: AuthContextValue = {

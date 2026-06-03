@@ -18,18 +18,7 @@ export default function AuthLayout({
     }
   }, [isLoading, isAuthenticated, router])
 
-  if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-mint-bg">
-        <div className="flex flex-col items-center gap-3">
-          <div className="size-12 animate-spin rounded-full border-4 border-mint-border border-t-mint-accent" />
-          <span className="text-sm text-mint-muted">加载中...</span>
-        </div>
-      </div>
-    )
-  }
-
-  if (isAuthenticated) {
+  if (isLoading || isAuthenticated) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-mint-bg">
         <div className="flex flex-col items-center gap-3">

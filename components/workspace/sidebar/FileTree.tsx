@@ -5,7 +5,7 @@ import { TreeItem } from "@/components/workspace/sidebar/TreeItem";
 import { MAX_DEPTH } from "@/constants/fileTree";
 
 export function FileTree() {
-  const tree = useFileTreeStore((s) => s.tree);
+  const tree = useFileTreeStore((s) => s.getTree());
   const selectedId = useFileTreeStore((s) => s.selectedNodeId);
 
   return (

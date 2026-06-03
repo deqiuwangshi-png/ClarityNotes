@@ -6,12 +6,6 @@ export interface DocNode {
   text?: string
 }
 
-export interface UserInfo {
-  displayName: string
-  email: string
-  avatarInitial: string
-}
-
 export interface TreeNode {
   id: string
   name: string

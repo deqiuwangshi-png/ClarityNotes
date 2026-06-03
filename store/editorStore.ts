@@ -1,8 +1,8 @@
 import { create } from "zustand"
 import type { DocNode } from "@/types/fileTree"
 import { countWords } from "@/utils/editor"
-import { saveContent, updateTitle } from "@/lib/services/editorService"
 import { findNode } from "@/lib/services/fileTreeService"
+import { saveDocument } from "@/lib/services/editorService"
 import { useFileTreeStore } from "@/store/fileTreeStore"
 
 const AUTO_SAVE_DELAY = 2000
@@ -14,6 +14,8 @@ interface EditorState {
   wordCount: number
   isSaved: boolean
   isDirty: boolean
+  loadedUpdatedAt: string | null
+  error: string | null
 
   loadFromNode: (nodeId: string, nodeContent?: DocNode, nodeTitle?: string) => void
   loadEditorFromTree: (nodeId: string) => void
@@ -26,23 +28,29 @@ interface EditorState {
 let saveTimer: ReturnType<typeof setTimeout> | null = null
 
 export const useEditorStore = create<EditorState>()((set, get) => {
-  function performSave() {
-    const { content, isDirty } = get()
+  async function performSave() {
+    const { content, title, isDirty, loadedUpdatedAt } = get()
     if (!isDirty) return
 
     set({ isSaved: false })
-    const fileTreeState = useFileTreeStore.getState()
-    const nodeId = fileTreeState.selectedNodeId
+    const nodeId = useFileTreeStore.getState().selectedNodeId
     if (!nodeId) {
       set({ isSaved: true, isDirty: false })
       return
     }
 
     const words = countWords(content)
-    const result = saveContent(fileTreeState.tree, nodeId, content, words)
-    if (!("error" in result)) {
-      useFileTreeStore.getState().setTree(result.tree)
-      set({ isSaved: true, isDirty: false, wordCount: words })
+    try {
+      await saveDocument({ nodeId, title, content, wordCount: words, expectedUpdatedAt: loadedUpdatedAt ?? undefined })
+      // 保存成功后更新本地版本号
+      const now = new Date().toISOString()
+      set({ isSaved: true, isDirty: false, wordCount: words, loadedUpdatedAt: now })
+    } catch (err) {
+      if ((err as Error).message.startsWith('CONFLICT')) {
+        set({ isSaved: false, isDirty: true, error: '文档已被其他会话修改，请刷新后重试' })
+      } else {
+        set({ isSaved: false })
+      }
     }
   }
 
@@ -62,6 +70,8 @@ export const useEditorStore = create<EditorState>()((set, get) => {
     wordCount: 0,
     isSaved: true,
     isDirty: false,
+    loadedUpdatedAt: null,
+    error: null,
 
     loadFromNode: (nodeId: string, nodeContent?: DocNode, nodeTitle?: string) => {
       if (saveTimer !== null) clearTimeout(saveTimer)
@@ -76,7 +86,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
     },
 
     loadEditorFromTree: (nodeId: string) => {
-      const tree = useFileTreeStore.getState().tree
+      const tree = useFileTreeStore.getState().getTree()
       const node = findNode(tree, nodeId)
       if (saveTimer !== null) clearTimeout(saveTimer)
       const content = node?.content ?? EMPTY_DOC
@@ -86,6 +96,8 @@ export const useEditorStore = create<EditorState>()((set, get) => {
         wordCount: countWords(content),
         isSaved: true,
         isDirty: false,
+        loadedUpdatedAt: node?.updatedAt ?? null,
+        error: null,
       })
     },
 
@@ -103,15 +115,6 @@ export const useEditorStore = create<EditorState>()((set, get) => {
       if (saveTimer !== null) {
         clearTimeout(saveTimer)
         saveTimer = null
-      }
-      const { title } = get()
-      const fileTreeState = useFileTreeStore.getState()
-      const nodeId = fileTreeState.selectedNodeId
-      if (!nodeId) return
-
-      const titleResult = updateTitle(fileTreeState.tree, nodeId, title)
-      if (!("error" in titleResult)) {
-        useFileTreeStore.getState().setTree(titleResult.tree)
       }
       performSave()
     },

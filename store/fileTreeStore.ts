@@ -1,48 +1,158 @@
 import { create } from "zustand"
-import type { TreeNode, BreadcrumbItem, DocumentInfo, FolderItem } from "@/types/fileTree"
-import { fileTreeRepo, trashRepo } from "@/repositories"
+import type { TreeNode } from "@/types/fileTree"
+import { fileTreeRepo, supabaseAuthRepo } from "@/repositories"
 import {
   findNode,
   getSiblingNames,
-  buildBreadcrumb,
-  createNode,
   renameNode as renameNodeService,
   deleteNode as deleteNodeService,
   moveToTrash,
+  getDefaultRoot,
+  isRootNode,
+  addChildToTree,
 } from "@/lib/services/fileTreeService"
 import { validateName } from "@/utils/validator"
-import { formatTimestamp } from "@/utils/dateFormatter"
+import { DEFAULT_ROOT_ID } from "@/constants/fileTree"
 
 interface FileTreeState {
-  tree: TreeNode[]
+  _tree: TreeNode[]
   selectedNodeId: string | null
   expandedIds: Set<string>
   currentView: "editor" | "folder"
   creatingNodeId: string | null
+  loading: boolean
+  error: string | null
 
+  loadTree: () => Promise<void>
   selectNode: (id: string) => void
   toggleExpand: (id: string) => void
-  createFile: (parentId: string) => void
-  createFolder: (parentId: string) => void
+  createFile: (parentId: string) => Promise<void>
+  createFolder: (parentId: string) => Promise<void>
   validateCreateName: (nodeId: string, name: string) => string | null
-  commitRename: (nodeId: string, newName: string) => void
+  commitRename: (nodeId: string, newName: string) => Promise<void>
   cancelCreate: (nodeId: string) => void
-  deleteNode: (nodeId: string) => void
+  deleteNode: (nodeId: string) => Promise<void>
   setTree: (tree: TreeNode[]) => void
-  restoreFromTrash: (nodeId: string, trashStoreRestore: (id: string, tree: TreeNode[]) => { newTree: TreeNode[]; restoredId?: string } | null) => void
+
+  /** 公开 selector：获取当前树 */
+  getTree: () => TreeNode[]
+  /** 公开 selector：获取当前选中节点 */
+  getSelectedNode: () => TreeNode | null
 }
 
-export const useFileTreeStore = create<FileTreeState>()((set, get) => ({
-  tree: fileTreeRepo.getTree(),
+export const useFileTreeStore = create<FileTreeState>()((set, get) => {
+  async function _ensureRealRoot(parentId: string, userId: string): Promise<string | null> {
+    if (parentId !== DEFAULT_ROOT_ID) return parentId
+
+    // 检查本地树中是否已有真实根节点（非虚拟 DEFAULT_ROOT_ID）
+    const { _tree } = get()
+    const realRoot = _tree.find(
+      (n) => n.id !== DEFAULT_ROOT_ID && n.level === 1,
+    )
+    if (realRoot) return realRoot.id
+
+    try {
+      // 确保 profile 存在：修复 auth.users 有记录但 profiles 缺失导致的 FK 约束断裂
+      await fileTreeRepo.ensureProfile(userId)
+
+      return await fileTreeRepo.insertNode({
+        user_id: userId,
+        parent_id: null,
+        name: "我的文档",
+        type: "folder",
+        level: 1,
+        sort_order: 0,
+      })
+    } catch {
+      // DB 约束（唯一索引 / RLS / trigger）已拒绝 → 重新加载树获取最新状态
+      await get().loadTree()
+      set({ error: "根节点初始化失败，请刷新页面重试" })
+      return null
+    }
+  }
+
+  async function _createNode(
+    parentId: string,
+    name: string,
+    type: "file" | "folder",
+    view: "editor" | "folder",
+  ) {
+    const session = await supabaseAuthRepo.getSession()
+    const userId = session?.id ?? ""
+
+    const realParentId = await _ensureRealRoot(parentId, userId)
+    if (realParentId === null) return
+
+    const { _tree } = get()
+    const parent = findNode(_tree, parentId)
+    const level = parent ? parent.level + 1 : 2
+    const sortOrder = parent?.children?.length ?? 0
+
+    try {
+      const newId = await fileTreeRepo.insertNode({
+        user_id: userId,
+        parent_id: realParentId,
+        name,
+        type,
+        level,
+        sort_order: sortOrder,
+      })
+
+      const newNode: TreeNode = type === "file"
+        ? {
+            id: newId, name, type: "file", level,
+            expanded: false,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            wordCount: 0,
+          }
+        : {
+            id: newId, name, type: "folder", level,
+            expanded: true, children: [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          }
+
+      set((state) => ({
+        _tree: addChildToTree(state._tree, realParentId, newNode, parentId === DEFAULT_ROOT_ID),
+        selectedNodeId: newId,
+        creatingNodeId: newId,
+        currentView: view,
+      }))
+    } catch {
+      get().loadTree()
+      set({ error: `创建${type === "file" ? "文档" : "文件夹"}失败，请重试` })
+    }
+  }
+
+  return {
+  _tree: [],
   selectedNodeId: null,
   expandedIds: new Set<string>(),
   currentView: "folder",
   creatingNodeId: null,
+  loading: true,
+  error: null,
+
+  loadTree: async () => {
+    set({ loading: true, error: null })
+    try {
+      const rawTree = await fileTreeRepo.getTree()
+      const tree = rawTree.length > 0 ? rawTree : [getDefaultRoot()]
+      set({
+        _tree: tree,
+        loading: false,
+        selectedNodeId: tree[0]?.id ?? null,
+        expandedIds: new Set(tree[0]?.id ? [tree[0].id] : []),
+      })
+    } catch (err) {
+      set({ error: (err as Error).message, loading: false })
+    }
+  },
 
   selectNode: (id: string) => {
-    const { tree } = get()
     if (id === get().selectedNodeId) return
-    const node = findNode(tree, id)
+    const node = findNode(get()._tree, id)
     set({
       selectedNodeId: id,
       currentView: node?.type === "folder" ? "folder" : "editor",
@@ -52,155 +162,99 @@ export const useFileTreeStore = create<FileTreeState>()((set, get) => ({
   toggleExpand: (id: string) => {
     set((state) => {
       const next = new Set(state.expandedIds)
-      if (next.has(id)) {
-        next.delete(id)
-      } else {
-        next.add(id)
-      }
+      if (next.has(id)) { next.delete(id) } else { next.add(id) }
       return { expandedIds: next }
     })
   },
 
-  createFile: (parentId: string) => {
-    const { tree } = get()
-    const result = createNode(tree, parentId, "file")
-    if ("error" in result) return
-    const { newTree, createdNode } = result
-    fileTreeRepo.setTree(newTree)
-    set({ tree: newTree, selectedNodeId: createdNode.id, creatingNodeId: createdNode.id, currentView: "editor" })
-  },
+  createFile: (parentId: string) => _createNode(parentId, "未命名文档", "file", "editor"),
 
-  createFolder: (parentId: string) => {
-    const { tree } = get()
-    const result = createNode(tree, parentId, "folder")
-    if ("error" in result) return
-    const { newTree, createdNode } = result
-    fileTreeRepo.setTree(newTree)
-    set({ tree: newTree, selectedNodeId: createdNode.id, creatingNodeId: createdNode.id, currentView: "folder" })
-  },
+  createFolder: (parentId: string) => _createNode(parentId, "未命名文件夹", "folder", "folder"),
 
   validateCreateName: (nodeId: string, name: string) => {
-    const { tree } = get()
-    const siblingNames = getSiblingNames(tree, nodeId)
+    const { _tree } = get()
+    const siblingNames = getSiblingNames(_tree, nodeId)
     return validateName(name, siblingNames)
   },
 
-  commitRename: (nodeId: string, newName: string) => {
-    const { tree } = get()
-    const result = renameNodeService(tree, nodeId, newName)
+  commitRename: async (nodeId: string, newName: string) => {
+    const { _tree: oldTree } = get()
+    const result = renameNodeService(get()._tree, nodeId, newName)
     if ("error" in result) return
-    fileTreeRepo.setTree(result.newTree)
-    set({ tree: result.newTree, creatingNodeId: null })
+    set({ _tree: result.newTree, creatingNodeId: null })
+
+    if (nodeId === DEFAULT_ROOT_ID) return
+
+    try {
+      await fileTreeRepo.updateNode(nodeId, { name: newName.trim() })
+    } catch {
+      set({ _tree: oldTree, error: "重命名失败" })
+    }
   },
 
   cancelCreate: (nodeId: string) => {
-    const { tree, selectedNodeId } = get()
-    const deleteResult = deleteNodeService(tree, nodeId)
-    if ("error" in deleteResult) return
-    fileTreeRepo.setTree(deleteResult.newTree)
+    if (nodeId === DEFAULT_ROOT_ID) {
+      set({ creatingNodeId: null })
+      return
+    }
+
+    const { _tree, selectedNodeId } = get()
+    const node = findNode(_tree, nodeId)
+    if (node && isRootNode(node)) {
+      set({ creatingNodeId: null })
+      return
+    }
+
+    const result = deleteNodeService(_tree, nodeId)
+    if ("error" in result) return
     set({
-      tree: deleteResult.newTree,
+      _tree: result.newTree,
       creatingNodeId: null,
-      ...(selectedNodeId === nodeId ? { selectedNodeId: tree[0]?.id ?? null, currentView: "folder" as const } : {}),
+      ...(selectedNodeId === nodeId
+        ? { selectedNodeId: _tree[0]?.id ?? null, currentView: "folder" as const }
+        : {}),
     })
   },
 
-  deleteNode: (nodeId: string) => {
-    const { tree, selectedNodeId } = get()
-    const result = moveToTrash(tree, nodeId)
+  deleteNode: async (nodeId: string) => {
+    const { _tree } = get()
+    const node = findNode(_tree, nodeId)
+    if (!node) return
+
+    if (isRootNode(node)) {
+      set({ error: "不能删除根节点" })
+      return
+    }
+
+    const { _tree: currentTree, selectedNodeId } = get()
+
+    const result = moveToTrash(currentTree, nodeId)
     if ("error" in result) return
-    const { newTree, trashItem } = result
-    trashRepo.addToTrash(trashItem)
-    fileTreeRepo.setTree(newTree)
+    const { newTree } = result
     set({
-      tree: newTree,
-      ...(selectedNodeId === nodeId ? { selectedNodeId: tree[0]?.id ?? null, currentView: "folder" as const } : {}),
+      _tree: newTree,
+      ...(selectedNodeId === nodeId
+        ? { selectedNodeId: newTree[0]?.id ?? null, currentView: "folder" as const }
+        : {}),
     })
+
+    try {
+      // RPC 内部递归 CTE 自动收集所有子孙节点，前端只需传根节点 ID
+      await fileTreeRepo.moveToTrash([nodeId])
+    } catch {
+      get().loadTree()
+    }
   },
 
   setTree: (tree: TreeNode[]) => {
-    fileTreeRepo.setTree(tree)
-    set({ tree })
+    set({ _tree: tree.length > 0 ? tree : [getDefaultRoot()] })
   },
 
-  restoreFromTrash: (nodeId: string, trashStoreRestore) => {
-    const { tree, expandedIds } = get()
-    const result = trashStoreRestore(nodeId, tree)
-    if (!result) return
-    fileTreeRepo.setTree(result.newTree)
+  getTree: () => get()._tree,
 
-    const nextExpanded = new Set(expandedIds)
-    if (result.restoredId) {
-      const parentId = findParentId(result.newTree, result.restoredId)
-      if (parentId) nextExpanded.add(parentId)
-    }
-
-    set({ tree: result.newTree, selectedNodeId: result.newTree[0]?.id ?? null, currentView: "folder", expandedIds: nextExpanded })
+  getSelectedNode: () => {
+    const { _tree, selectedNodeId } = get()
+    if (!selectedNodeId) return _tree[0] ?? null
+    return findNode(_tree, selectedNodeId) ?? _tree[0] ?? null
   },
-}))
-
-function findParentId(nodes: TreeNode[], childId: string): string | null {
-  for (const node of nodes) {
-    if (node.children?.some((c) => c.id === childId)) {
-      return node.id
-    }
-    if (node.children) {
-      const found = findParentId(node.children, childId)
-      if (found) return found
-    }
-  }
-  return null
-}
-
-export function useSelectedNode(): TreeNode | null {
-  const tree = useFileTreeStore((s) => s.tree)
-  const selectedNodeId = useFileTreeStore((s) => s.selectedNodeId)
-  if (!selectedNodeId) return tree[0] ?? null
-  return findNode(tree, selectedNodeId) ?? tree[0] ?? null
-}
-
-export function useFolderItems(): FolderItem[] {
-  const tree = useFileTreeStore((s) => s.tree)
-  const selectedNodeId = useFileTreeStore((s) => s.selectedNodeId)
-  const node = selectedNodeId ? findNode(tree, selectedNodeId) : tree[0]
-  if (!node || node.type !== "folder" || !node.children) return []
-  return node.children.map((child) => ({
-    id: child.id,
-    name: child.name,
-    type: child.type as "folder" | "file",
-    lastModified: child.updatedAt ?? formatTimestamp(),
-    createdAt: child.createdAt ?? formatTimestamp(),
-  }))
-}
-
-export function useBreadcrumb(): BreadcrumbItem[] {
-  const tree = useFileTreeStore((s) => s.tree)
-  const selectedNodeId = useFileTreeStore((s) => s.selectedNodeId)
-  if (!selectedNodeId) return []
-  return buildBreadcrumb(tree, selectedNodeId)
-}
-
-export function useDocumentInfo(): DocumentInfo | null {
-  const tree = useFileTreeStore((s) => s.tree)
-  const selectedNodeId = useFileTreeStore((s) => s.selectedNodeId)
-  if (!selectedNodeId) return null
-  const node = findNode(tree, selectedNodeId)
-  if (!node || node.type !== "file") return null
-  return {
-    id: node.id,
-    title: node.name,
-    content: node.content ?? "",
-    createdAt: node.createdAt ?? formatTimestamp(),
-    lastModified: node.updatedAt ?? formatTimestamp(),
-    isSaved: true,
-    wordCount: node.wordCount ?? 0,
-  }
-}
-
-export function useFolderName(): string {
-  const tree = useFileTreeStore((s) => s.tree)
-  const selectedNodeId = useFileTreeStore((s) => s.selectedNodeId)
-  if (!selectedNodeId) return "我的文档"
-  const node = selectedNodeId ? findNode(tree, selectedNodeId) : tree[0]
-  return node?.name ?? "我的文档"
-}
+}})

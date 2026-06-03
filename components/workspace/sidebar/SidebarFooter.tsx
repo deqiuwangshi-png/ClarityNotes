@@ -1,16 +1,14 @@
 "use client";
 
-import Link from "next/link";
-
 interface SidebarFooterProps {
   onStarredClick?: () => void;
-  trashHref?: string;
+  onTrashClick?: () => void;
   isTrashActive?: boolean;
 }
 
 export function SidebarFooter({
   onStarredClick,
-  trashHref = "/trash",
+  onTrashClick,
   isTrashActive,
 }: SidebarFooterProps) {
   return (
@@ -26,13 +24,14 @@ export function SidebarFooter({
         <span>精选</span>
       </button>
       <div className="h-6 w-px rounded-full bg-[#d8e4de]" aria-hidden="true" />
-      <Link
+      <button
         className={`flex items-center gap-2.5 rounded-md px-3 py-1.5 text-[13px] font-medium transition flex-1 ${
           isTrashActive
             ? "bg-mint-hover text-mint-accent-light"
             : "hover:bg-mint-hover/50 text-mint-muted"
         }`}
-        href={trashHref}
+        type="button"
+        onClick={onTrashClick}
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={isTrashActive ? "text-mint-accent" : "text-mint-muted"}>
           <path d="M3 6h18" />
@@ -40,7 +39,7 @@ export function SidebarFooter({
           <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
         </svg>
         <span>回收站</span>
-      </Link>
+      </button>
     </div>
   );
 }

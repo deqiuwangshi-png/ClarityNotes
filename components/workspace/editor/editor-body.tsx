@@ -48,6 +48,7 @@ export function EditorBody({ readOnly, externalTitle, externalContent }: EditorB
     extensions,
     content: readOnly ? (externalContent ?? undefined) : content,
     editable: !readOnly,
+    immediatelyRender: true,
     onUpdate: readOnly
       ? undefined
       : ({ editor: ed }) => {

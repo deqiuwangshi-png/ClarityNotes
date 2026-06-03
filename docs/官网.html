@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>ClarityNotes · 清晰思考，流畅记录</title>
+    <!-- Tailwind CSS + 扩展配置 + 字体 + Material Icons -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL@20..48,100..700,0..1" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        // 基于 Mint Outline 设计系统
+                        "surface": "#f6faf7",
+                        "surface-dim": "#d7dbd8",
+                        "surface-bright": "#f6faf7",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-low": "#f0f5f1",
+                        "surface-container": "#ebefec",
+                        "surface-container-high": "#e5e9e6",
+                        "surface-container-highest": "#dfe3e0",
+                        "on-surface": "#181d1b",
+                        "on-surface-variant": "#3e4946",
+                        "outline": "#6e7a75",
+                        "outline-variant": "#bdc9c4",
+                        "primary": "#006b5b",
+                        "on-primary": "#ffffff",
+                        "primary-container": "#6bc7b2",
+                        "on-primary-container": "#005245",
+                        "inverse-primary": "#7bd7c1",
+                        "secondary": "#2c6956",
+                        "on-secondary": "#ffffff",
+                        "secondary-container": "#aeedd5",
+                        "on-secondary-container": "#316d5b",
+                        "tertiary": "#93493b",
+                        "tertiary-container": "#fd9e8c",
+                        "error": "#ba1a1a",
+                        "surface-variant": "#dfe3e0",
+                    },
+                    fontFamily: {
+                        sans: ["Inter", "system-ui", "sans-serif"],
+                    },
+                    fontSize: {
+                        "display-lg": ["56px", { lineHeight: "1.1", letterSpacing: "-0.02em", fontWeight: "700" }],
+                        "display-md": ["40px", { lineHeight: "1.2", letterSpacing: "-0.01em", fontWeight: "700" }],
+                        "headline-md": ["24px", { lineHeight: "1.3", fontWeight: "600" }],
+                        "body-lg": ["18px", { lineHeight: "1.5", fontWeight: "400" }],
+                        "body-md": ["16px", { lineHeight: "1.5", fontWeight: "400" }],
+                        "label-caps": ["12px", { lineHeight: "1.2", letterSpacing: "0.05em", fontWeight: "600" }],
+                    },
+                    borderRadius: {
+                        "xl": "16px",
+                        "2xl": "24px",
+                        "3xl": "32px",
+                    },
+                    boxShadow: {
+                        "soft": "0 12px 30px rgba(0, 0, 0, 0.03), 0 4px 8px rgba(0, 0, 0, 0.02)",
+                        "elevation": "0 20px 35px -12px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.02)",
+                        "glass": "0 8px 20px rgba(0, 0, 0, 0.02), 0 2px 6px rgba(0, 0, 0, 0.02)",
+                    },
+                    spacing: {
+                        "18": "72px",
+                        "22": "88px",
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        * {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        body {
+            background-color: #f6faf7;
+        }
+        /* 毛玻璃效果 */
+        .glass-nav {
+            background: rgba(246, 250, 247, 0.72);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(189, 201, 196, 0.25);
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+        }
+        /* 定制滚动条 */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #eef2ef;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #bdc9c4;
+            border-radius: 12px;
+        }
+        /* 按钮hover细腻过渡 */
+        .btn-transition {
+            transition: all 0.2s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+        }
+        /* 模拟编辑器预览样式 */
+        .preview-note {
+            box-shadow: 0 25px 40px -12px rgba(0, 0, 0, 0.12);
+            transition: transform 0.25s ease;
+        }
+        .preview-note:hover {
+            transform: translateY(-4px);
+        }
+        .feature-icon {
+            transition: all 0.2s ease;
+        }
+        .feature-card:hover .feature-icon {
+            transform: scale(1.05);
+            color: #006b5b;
+        }
+        /* 选中文本 */
+        ::selection {
+            background-color: #c1efe2;
+            color: #00201a;
+        }
+    </style>
+</head>
+<body class="font-sans text-body-md text-on-surface bg-surface">
+
+    <!-- 导航栏（毛玻璃固定） -->
+    <header class="fixed top-0 w-full z-50 glass-nav transition-all">
+        <div class="max-w-7xl mx-auto px-6 md:px-8 py-4 flex items-center justify-between">
+            <!-- Logo + 品牌名 -->
+            <div class="flex items-center gap-2 group cursor-pointer">
+                <div class="w-8 h-8 rounded-xl bg-primary text-white flex items-center justify-center shadow-sm">
+                    <span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">draw</span>
+                </div>
+                <span class="font-bold text-headline-md tracking-tight text-primary">ClarityNotes</span>
+            </div>
+            
+            <!-- 桌面端导航链接 -->
+            <nav class="hidden md:flex items-center gap-8 text-body-md font-medium text-on-surface-variant">
+                <a href="#" class="hover:text-primary transition-colors">功能</a>
+                <a href="#" class="hover:text-primary transition-colors">设计哲学</a>
+                <a href="#" class="hover:text-primary transition-colors">定价</a>
+                <a href="#" class="hover:text-primary transition-colors">部落格</a>
+            </nav>
+            
+            <!-- CTA 按钮组 -->
+            <div class="flex items-center gap-3">
+                <button class="hidden md:flex text-body-md font-medium text-on-surface-variant hover:text-primary transition-colors">登录</button>
+                <button class="bg-primary text-on-primary px-5 py-2 rounded-full text-label-caps shadow-sm hover:shadow-md hover:bg-primary/90 transition-all btn-transition active:scale-95">
+                    免费试用
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- Hero 区块：大面积留白 + 认知清晰标题 -->
+        <section class="pt-32 md:pt-40 pb-16 md:pb-24 px-6 overflow-hidden">
+            <div class="max-w-6xl mx-auto text-center">
+                <div class="inline-flex items-center gap-2 bg-surface-container-high/60 backdrop-blur-sm px-4 py-1.5 rounded-full text-label-caps text-primary mb-6 shadow-soft">
+                    <span class="material-symbols-outlined text-sm">psychiatry</span>
+                    <span>认知优先 · 无干扰书写</span>
+                </div>
+                <h1 class="text-display-lg md:text-display-lg tracking-tight text-on-surface max-w-4xl mx-auto leading-[1.1]">
+                    让思绪自由流动<br>
+                    笔记工具<span class="text-primary"> 回归本质</span>
+                </h1>
+                <p class="text-body-lg text-on-surface-variant max-w-2xl mx-auto mt-6 leading-relaxed">
+                    ClarityNotes 消除了复杂的文件夹层级和视觉噪音。扁平的笔记架构 + 智能全局搜索，为您构建一座“第二大脑”，专注于真正重要的事情——思考与创造。
+                </p>
+                <div class="flex flex-col sm:flex-row gap-4 justify-center mt-10">
+                    <button class="bg-primary text-on-primary px-8 py-3 rounded-2xl text-body-md font-semibold shadow-soft hover:shadow-md btn-transition flex items-center gap-2 justify-center">
+                        <span class="material-symbols-outlined">download</span>
+                        开始免费使用
+                    </button>
+                    <button class="border border-outline-variant bg-white/50 backdrop-blur-sm text-on-surface-variant px-8 py-3 rounded-2xl text-body-md font-medium hover:bg-surface-container transition-all flex items-center gap-2 justify-center">
+                        <span class="material-symbols-outlined">play_circle</span>
+                        观看演示
+                    </button>
+                </div>
+                <!-- 清新装饰: 轻柔波浪线 (纯粹的装饰) -->
+                <div class="mt-16 relative flex justify-center">
+                    <div class="w-32 h-1 bg-primary-container/30 rounded-full"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 产品预览卡片 (展示典型笔记界面) 使用毛玻璃+阴影 -->
+        <section class="px-6 pb-20 md:pb-28">
+            <div class="max-w-5xl mx-auto">
+                <div class="rounded-3xl bg-surface-container-low border border-outline-variant/20 shadow-elevation overflow-hidden preview-note">
+                    <div class="grid md:grid-cols-5 gap-0">
+                        <!-- 模拟侧边栏区域 -->
+                        <div class="md:col-span-1 bg-surface-container-lowest/70 p-4 border-r border-outline-variant/20">
+                            <div class="flex items-center gap-2 mb-5">
+                                <div class="w-6 h-6 rounded-lg bg-primary-container/30 flex items-center justify-center"><span class="material-symbols-outlined text-primary text-sm">search</span></div>
+                                <span class="text-label-caps text-on-surface-variant">快速搜索</span>
+                            </div>
+                            <div class="space-y-3">
+                                <div class="flex items-center gap-2 text-primary bg-secondary-container/40 p-2 rounded-xl"><span class="material-symbols-outlined text-sm">description</span><span class="text-sm font-medium">产品设计 101</span></div>
+                                <div class="flex items-center gap-2 text-on-surface-variant"><span class="material-symbols-outlined text-sm">description</span><span class="text-sm">用户体验原则</span></div>
+                                <div class="flex items-center gap-2 text-on-surface-variant"><span class="material-symbols-outlined text-sm">description</span><span class="text-sm">设计系统变量</span></div>
+                            </div>
+                        </div>
+                        <!-- 主编辑器预览区域 -->
+                        <div class="md:col-span-4 bg-white/50 p-6 md:p-8">
+                            <div class="mb-4 flex items-center justify-between">
+                                <div class="flex gap-1.5">
+                                    <div class="w-3 h-3 rounded-full bg-error/60"></div>
+                                    <div class="w-3 h-3 rounded-full bg-tertiary/40"></div>
+                                    <div class="w-3 h-3 rounded-full bg-primary-container"></div>
+                                </div>
+                                <span class="text-label-caps text-on-surface-variant">最后编辑 · 刚刚</span>
+                            </div>
+                            <h2 class="text-2xl font-bold text-on-surface mb-2">产品设计 101</h2>
+                            <p class="text-body-md text-on-surface-variant leading-relaxed">产品设计不仅是外观与感觉，更是关于产品如何运作。ClarityNotes 追求“认知清晰度”——减少干扰，专注思考。<span class="text-primary font-medium"> 每一个像素都服务于目标。</span></p>
+                            <ul class="mt-5 space-y-2">
+                                <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-primary"></span><span>视觉层级引导注意力</span></li>
+                                <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-primary"></span><span>即时反馈降低焦虑</span></li>
+                                <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-primary"></span><span>离线优先 & 无缝同步</span></li>
+                            </ul>
+                            <div class="mt-6 flex gap-2 text-primary-container text-sm font-medium items-center">
+                                <span class="material-symbols-outlined text-primary">check_circle</span>
+                                <span>认知轻量 · 桌面级体验</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- 标签提示 -->
+                <div class="flex justify-center gap-3 mt-6 text-label-caps text-on-surface-variant">
+                    <span class="bg-surface-container px-3 py-1 rounded-full">✨ 零干扰编辑器</span>
+                    <span class="bg-surface-container px-3 py-1 rounded-full">🔍 全局闪电搜索</span>
+                    <span class="bg-surface-container px-3 py-1 rounded-full">📁 扁平化大纲</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- 核心特色网格 (4个特点) 符合设计系统卡片风格 -->
+        <section class="px-6 pb-24">
+            <div class="max-w-7xl mx-auto">
+                <div class="text-center mb-14">
+                    <h2 class="text-display-md font-bold text-on-surface">为清晰思考而生</h2>
+                    <p class="text-body-lg text-on-surface-variant max-w-2xl mx-auto mt-4">精心设计每一个细节，让想法真正落地。</p>
+                </div>
+                <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-7">
+                    <!-- 特色卡片 1 -->
+                    <div class="bg-surface-container-lowest rounded-2xl p-6 shadow-soft border border-outline-variant/10 transition-all hover:shadow-elevation feature-card">
+                        <div class="feature-icon w-12 h-12 rounded-2xl bg-primary-container/20 flex items-center justify-center mb-5 text-primary">
+                            <span class="material-symbols-outlined text-3xl">psychology</span>
+                        </div>
+                        <h3 class="text-headline-md font-semibold">认知负荷管理</h3>
+                        <p class="text-body-md text-on-surface-variant mt-2">最小视觉干扰，智能提示及动态大纲，帮助您在复杂信息中保持心流。</p>
+                    </div>
+                    <!-- 特色卡片 2 -->
+                    <div class="bg-surface-container-lowest rounded-2xl p-6 shadow-soft border border-outline-variant/10 transition-all hover:shadow-elevation feature-card">
+                        <div class="feature-icon w-12 h-12 rounded-2xl bg-primary-container/20 flex items-center justify-center mb-5 text-primary">
+                            <span class="material-symbols-outlined text-3xl">speed</span>
+                        </div>
+                        <h3 class="text-headline-md font-semibold">毫秒级全局搜索</h3>
+                        <p class="text-body-md text-on-surface-variant mt-2">智能全文检索、标签联想，数百篇笔记瞬间定位，消除“整理焦虑”。</p>
+                    </div>
+                    <!-- 特色卡片 3 -->
+                    <div class="bg-surface-container-lowest rounded-2xl p-6 shadow-soft border border-outline-variant/10 transition-all hover:shadow-elevation feature-card">
+                        <div class="feature-icon w-12 h-12 rounded-2xl bg-primary-container/20 flex items-center justify-center mb-5 text-primary">
+                            <span class="material-symbols-outlined text-3xl">checklist</span>
+                        </div>
+                        <h3 class="text-headline-md font-semibold">任务即笔记</h3>
+                        <p class="text-body-md text-on-surface-variant mt-2">待办事项与笔记深度融合，灵活嵌套大纲，让行动与思考无缝衔接。</p>
+                    </div>
+                    <!-- 特色卡片 4 -->
+                    <div class="bg-surface-container-lowest rounded-2xl p-6 shadow-soft border border-outline-variant/10 transition-all hover:shadow-elevation feature-card">
+                        <div class="feature-icon w-12 h-12 rounded-2xl bg-primary-container/20 flex items-center justify-center mb-5 text-primary">
+                            <span class="material-symbols-outlined text-3xl">cloud_sync</span>
+                        </div>
+                        <h3 class="text-headline-md font-semibold">端到端加密同步</h3>
+                        <p class="text-body-md text-on-surface-variant mt-2">跨设备实时同步，隐私优先，您的内容只有您能访问。</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 优雅设计亮点区域 —— “认知清晰” 双栏布局 -->
+        <section class="px-6 pb-24">
+            <div class="max-w-6xl mx-auto bg-surface-container-high/40 rounded-3xl p-6 md:p-12 border border-outline-variant/10 shadow-soft">
+                <div class="grid md:grid-cols-2 gap-12 items-center">
+                    <div>
+                        <div class="inline-block px-3 py-1 rounded-full bg-primary-container/20 text-primary text-label-caps mb-4">设计哲学</div>
+                        <h2 class="text-display-md font-bold tracking-tight">温柔聚焦，而非冰冷高效</h2>
+                        <p class="text-body-lg text-on-surface-variant mt-4 leading-relaxed">ClarityNotes 借鉴了“薄荷调色板”与细腻的空间留白。我们相信，知识工作者的压力往往源于界面的“压迫感”。因此，我们使用柔和阴影、32px 超大圆角和<strong class="text-primary">没有侵略性的边框</strong>，让您的思绪如同一张无限的白纸。</p>
+                        <div class="mt-8 flex flex-col gap-3">
+                            <div class="flex items-center gap-3"><span class="material-symbols-outlined text-primary">palette</span><span>全自定义主题 & 动态深色模式</span></div>
+                            <div class="flex items-center gap-3"><span class="material-symbols-outlined text-primary">font_download</span><span>Inter 专属排版 + 舒适行距 1.6</span></div>
+                            <div class="flex items-center gap-3"><span class="material-symbols-outlined text-primary">radio_button_unchecked</span><span>大纲连线 & 聚焦焦点模式</span></div>
+                        </div>
+                    </div>
+                    <div class="relative">
+                        <div class="bg-white rounded-3xl p-6 shadow-elevation border border-outline-variant/20 relative z-10">
+                            <div class="flex items-center gap-2 border-b border-outline-variant/20 pb-3 mb-4">
+                                <span class="material-symbols-outlined text-primary">format_quote</span>
+                                <span class="font-medium">我受益于 ClarityNotes 的“无压”组织</span>
+                            </div>
+                            <p class="text-body-md italic text-on-surface-variant">“过去我用各种笔记软件总觉得很难坚持，直到遇见 ClarityNotes —— 它真的让我爱上了记录。干净、理智，而且搜索功能极其强大。”<br>—— 产品设计师 · 李心怡</p>
+                            <div class="flex mt-5 text-primary-container"><span class="material-symbols-outlined">star_rate</span><span class="material-symbols-outlined">star_rate</span><span class="material-symbols-outlined">star_rate</span><span class="material-symbols-outlined">star_rate</span><span class="material-symbols-outlined">star_rate</span></div>
+                        </div>
+                        <!-- 装饰圆圈 -->
+                        <div class="absolute -bottom-4 -right-4 w-32 h-32 bg-primary-container/10 rounded-full blur-2xl z-0"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 数字统计 + 声誉区块 (极简) -->
+        <section class="px-6 pb-20">
+            <div class="max-w-6xl mx-auto">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+                    <div><div class="text-4xl font-bold text-primary">98%</div><div class="text-label-caps text-on-surface-variant mt-1">用户留存率</div></div>
+                    <div><div class="text-4xl font-bold text-primary">12k+</div><div class="text-label-caps text-on-surface-variant mt-1">活跃创造者</div></div>
+                    <div><div class="text-4xl font-bold text-primary">4.9</div><div class="text-label-caps text-on-surface-variant mt-1">App Store 评分</div></div>
+                    <div><div class="text-4xl font-bold text-primary">0</div><div class="text-label-caps text-on-surface-variant mt-1">认知摩擦设计原则</div></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 更靠近用户的 CTA 区块 -->
+        <section class="px-6 pb-28">
+            <div class="max-w-5xl mx-auto bg-primary-container/10 rounded-3xl p-8 md:p-12 text-center border border-outline-variant/10 shadow-soft backdrop-blur-sm">
+                <span class="material-symbols-outlined text-5xl text-primary mb-3">auto_awesome</span>
+                <h2 class="text-display-md font-bold">准备好清晰思考了吗？</h2>
+                <p class="text-body-lg text-on-surface-variant max-w-xl mx-auto mt-3">加入数千名设计师、写作者和思考者，体验真正无压的笔记工具。</p>
+                <div class="flex flex-wrap justify-center gap-4 mt-8">
+                    <button class="bg-primary text-on-primary px-8 py-3 rounded-2xl text-body-md font-semibold shadow-sm hover:shadow-lg transition-all flex items-center gap-2">开始免费写作 <span class="material-symbols-outlined">arrow_forward</span></button>
+                    <button class="border border-outline-variant bg-white/70 text-on-surface-variant px-8 py-3 rounded-2xl font-medium hover:bg-surface-container transition-all">联系销售团队</button>
+                </div>
+                <p class="text-label-caps text-on-surface-variant mt-6">无需信用卡 · 14 天全功能体验 · 随时取消</p>
+            </div>
+        </section>
+    </main>
+
+    <!-- 页脚区域 (简洁且契合品牌) -->
+    <footer class="bg-surface-container-low border-t border-outline-variant/20 py-12 px-6">
+        <div class="max-w-7xl mx-auto">
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-8 pb-8">
+                <div class="md:col-span-2">
+                    <div class="flex items-center gap-2 mb-4">
+                        <div class="w-8 h-8 rounded-xl bg-primary text-white flex items-center justify-center"><span class="material-symbols-outlined text-sm">draw</span></div>
+                        <span class="font-bold text-xl text-primary">ClarityNotes</span>
+                    </div>
+                    <p class="text-body-md text-on-surface-variant max-w-sm">认知清晰，轻量至上 — 新一代笔记工具，为深度思考者设计。</p>
+                    <div class="flex gap-4 mt-5">
+                        <span class="material-symbols-outlined text-on-surface-variant hover:text-primary cursor-pointer">alternate_email</span>
+                        <span class="material-symbols-outlined text-on-surface-variant hover:text-primary cursor-pointer">rss_feed</span>
+                        <span class="material-symbols-outlined text-on-surface-variant hover:text-primary cursor-pointer">chat</span>
+                    </div>
+                </div>
+                <div><h4 class="font-semibold mb-3 text-on-surface">产品</h4><ul class="space-y-2 text-on-surface-variant text-body-md"><li><a href="#" class="hover:text-primary">功能</a></li><li><a href="#" class="hover:text-primary">定价</a></li><li><a href="#" class="hover:text-primary">更新日志</a></li><li><a href="#" class="hover:text-primary">下载客户端</a></li></ul></div>
+                <div><h4 class="font-semibold mb-3 text-on-surface">资源</h4><ul class="space-y-2 text-on-surface-variant text-body-md"><li><a href="#" class="hover:text-primary">帮助中心</a></li><li><a href="#" class="hover:text-primary">博客</a></li><li><a href="#" class="hover:text-primary">设计系统</a></li><li><a href="#" class="hover:text-primary">社区指南</a></li></ul></div>
+                <div><h4 class="font-semibold mb-3 text-on-surface">公司</h4><ul class="space-y-2 text-on-surface-variant text-body-md"><li><a href="#" class="hover:text-primary">关于我们</a></li><li><a href="#" class="hover:text-primary">隐私条款</a></li><li><a href="#" class="hover:text-primary">品牌资料</a></li></ul></div>
+            </div>
+            <div class="pt-6 border-t border-outline-variant/20 text-center text-label-caps text-on-surface-variant">© 2026 ClarityNotes — 认知优先的设计革命</div>
+        </div>
+    </footer>
+
+    <!-- 简单的滚动交互: 改变导航透明度效果 -->
+    <script>
+        (function() {
+            const header = document.querySelector('header');
+            if (header) {
+                window.addEventListener('scroll', () => {
+                    if (window.scrollY > 20) {
+                        header.classList.add('shadow-soft');
+                        header.style.background = 'rgba(246, 250, 247, 0.88)';
+                    } else {
+                        header.classList.remove('shadow-soft');
+                        header.style.background = 'rgba(246, 250, 247, 0.72)';
+                    }
+                });
+            }
+            // 所有按钮点击演示轻提示 (可选)
+            const btns = document.querySelectorAll('button');
+            btns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    if(btn.innerText.includes('试用') || btn.innerText.includes('开始') || btn.innerText.includes('登录')) {
+                        e.preventDefault();
+                        alert('✨ ClarityNotes 演示模式 — 完整版即将上线，欢迎体验设计系统。');
+                    }
+                });
+            });
+        })();
+    </script>
+</body>
+</html>

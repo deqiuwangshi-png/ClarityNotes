@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback } from "react";
-import { useFileTreeStore, useBreadcrumb } from "@/store/fileTreeStore";
+import { useFileTreeStore } from "@/store/fileTreeStore";
+import { useBreadcrumb } from "@/hooks/use-file-tree";
 import type { BreadcrumbItem } from "@/types/fileTree";
 
 function BreadcrumbItemView({ item, onNavigate }: { item: BreadcrumbItem; onNavigate: (id: string) => void }) {

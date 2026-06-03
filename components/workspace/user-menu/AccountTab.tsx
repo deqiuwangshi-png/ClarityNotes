@@ -88,7 +88,7 @@ export function AccountTab() {
     reader.readAsDataURL(file);
   };
 
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
     const error = validateFullName(profileName);
     if (error) {
       setProfileNameError(error);
@@ -100,9 +100,9 @@ export function AccountTab() {
     if (profileAvatarFile) {
       const firstChar = trimmed.charAt(0);
       setDisplayAvatar(firstChar);
-      updateUser({ fullName: trimmed, avatar: firstChar });
+      await updateUser({ fullName: trimmed, avatar: firstChar });
     } else {
-      updateUser({ fullName: trimmed });
+      await updateUser({ fullName: trimmed });
     }
     setProfileModalOpen(false);
     triggerToast("个人信息修改成功");
@@ -114,7 +114,7 @@ export function AccountTab() {
     setPhoneModalOpen(true);
   };
 
-  const handleSavePhone = () => {
+  const handleSavePhone = async () => {
     const error = validatePhone(phoneInput);
     if (error) {
       setPhoneError(error);
@@ -122,7 +122,7 @@ export function AccountTab() {
     }
     setPhoneError("");
     setPhoneDisplay(maskPhone(phoneInput));
-    updateUser({ phone: phoneInput });
+    await updateUser({ phone: phoneInput });
     setPhoneModalOpen(false);
     triggerToast("手机号修改成功");
   };
@@ -133,7 +133,7 @@ export function AccountTab() {
     setEmailModalOpen(true);
   };
 
-  const handleSaveEmail = () => {
+  const handleSaveEmail = async () => {
     const error = validateEmail(emailInput);
     if (error) {
       setEmailError(error);
@@ -141,7 +141,7 @@ export function AccountTab() {
     }
     setEmailError("");
     setDisplayEmail(emailInput);
-    updateUser({ email: emailInput });
+    await updateUser({ email: emailInput });
     setEmailModalOpen(false);
     triggerToast("邮箱修改成功");
   };
@@ -156,12 +156,8 @@ export function AccountTab() {
     setPasswordModalOpen(true);
   };
 
-  const handleSavePassword = () => {
+  const handleSavePassword = async () => {
     if (!user) return;
-
-    const oldPwdErr = !oldPassword ? "请输入原密码" : "";
-    setOldPasswordError(oldPwdErr);
-    if (oldPwdErr) return;
 
     const strengthError = validatePasswordStrength(newPassword);
     if (strengthError) { setNewPasswordError(strengthError); return; }
@@ -171,8 +167,9 @@ export function AccountTab() {
     if (confirmError) { setConfirmPasswordError(confirmError); return; }
     setConfirmPasswordError("");
 
-    if (!changePassword(oldPassword, newPassword)) {
-      setOldPasswordError("原密码不正确");
+    const ok = await changePassword(newPassword);
+    if (!ok) {
+      setOldPasswordError("密码修改失败，请确认您已通过邮箱验证");
       return;
     }
     setOldPasswordError("");

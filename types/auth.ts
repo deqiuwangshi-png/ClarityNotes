@@ -7,6 +7,7 @@ export interface User {
   avatar: string
   membership: 'free' | 'pro' | 'enterprise'
   createdAt: string
+  updatedAt: string
 }
 
 export interface LoginPayload {
@@ -21,8 +22,6 @@ export interface RegisterPayload {
   password: string
 }
 
-export interface AuthResponse {
-  success: boolean
-  user?: User
-  error?: string
-}
+export type AuthResponse =
+  | { success: true; user: User }
+  | { success: false; error: string }

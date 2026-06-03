@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback } from "react";
 import { FloatingMenu } from "@/components/ui/floating-menu";
 import { useFileTreeStore } from "@/store/fileTreeStore";
+import { useUiStore } from "@/store/uiStore";
 import type { FolderItem } from "@/types/fileTree";
 
 interface FolderListItemProps {
@@ -13,31 +14,76 @@ interface FolderListItemProps {
 export function FolderListItem({ item, onClick: _onClick }: FolderListItemProps) {
   const isFolder = item.type === "folder";
   const [menuOpen, setMenuOpen] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState(item.name);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const menuBtnRef = useRef<HTMLButtonElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const commitRename = useFileTreeStore((s) => s.commitRename);
   const deleteNode = useFileTreeStore((s) => s.deleteNode);
+  const validateCreateName = useFileTreeStore((s) => s.validateCreateName);
+  const openConfirm = useUiStore((s) => s.openConfirm);
 
-  const handleRename = useCallback(() => {
+  const startRename = useCallback(() => {
     setMenuOpen(false);
-    const newName = window.prompt("请输入新名称", item.name.replace(/\.md$/, ""));
-    if (newName && newName.trim() && newName.trim() !== item.name.replace(/\.md$/, "")) {
-      const finalName = item.type === "file" && !newName.endsWith(".md") ? newName.trim() + ".md" : newName.trim();
-      commitRename(item.id, finalName);
+    setRenaming(true);
+    setRenameValue(item.type === "file" ? item.name.replace(/\.md$/, "") : item.name);
+    setErrorMsg(null);
+    requestAnimationFrame(() => {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    });
+  }, [item]);
+
+  const commit = useCallback(() => {
+    const trimmed = renameValue.trim();
+    if (!trimmed) {
+      setErrorMsg("名称不能为空");
+      return;
     }
-  }, [item, commitRename]);
+    const validationError = validateCreateName(item.id, trimmed);
+    if (validationError) {
+      setErrorMsg(validationError);
+      return;
+    }
+    const finalName = item.type === "file" && !trimmed.endsWith(".md")
+      ? trimmed + ".md"
+      : trimmed;
+    commitRename(item.id, finalName);
+    setRenaming(false);
+    setErrorMsg(null);
+  }, [renameValue, item, validateCreateName, commitRename]);
 
-  const handleDelete = useCallback(() => {
+  const handleRenameKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === "Enter") commit();
+    else if (e.key === "Escape") {
+      setRenaming(false);
+      setRenameValue(item.name);
+      setErrorMsg(null);
+    }
+  }, [commit, item.name]);
+
+  const handleDelete = useCallback(async () => {
     setMenuOpen(false);
-    const confirmed = window.confirm("确定要删除吗？删除后将移入回收站。");
+    const confirmed = await openConfirm({
+      title: "删除确认",
+      message: `确定要删除"${item.name}"吗？删除后将移入回收站。`,
+      confirmLabel: "删除",
+      variant: "danger",
+    });
     if (confirmed) {
       deleteNode(item.id);
     }
-  }, [item.id, deleteNode]);
+  }, [item, openConfirm, deleteNode]);
+
+  const handleClick = useCallback(() => {
+    if (!renaming) _onClick(item.id);
+  }, [renaming, _onClick, item.id]);
 
   return (
     <div
       className="group grid w-full grid-cols-[1fr_140px_140px_40px] items-center gap-3 rounded-xl bg-white px-4 py-3 shadow-sm transition-shadow hover:shadow-md hover:bg-mint-hover/70 cursor-pointer"
-      onClick={() => _onClick(item.id)}
+      onClick={handleClick}
     >
       <span className="flex items-center gap-3 min-w-0">
         <span
@@ -53,9 +99,28 @@ export function FolderListItem({ item, onClick: _onClick }: FolderListItemProps)
             {isFolder ? "folder" : "description"}
           </span>
         </span>
-        <span className="truncate text-[13px] font-medium text-mint-text">
-          {item.type === "file" ? item.name.replace(/\.md$/, "") : item.name}
-        </span>
+        {renaming ? (
+          <div className="flex-1 relative">
+            <input
+              ref={inputRef}
+              className="w-full truncate rounded border px-1 box-border text-[13px] text-mint-text outline-none font-medium m-0 py-0 appearance-none min-w-0 leading-normal border-mint-accent"
+              value={renameValue}
+              onChange={(e) => { setRenameValue(e.target.value); setErrorMsg(null); }}
+              onBlur={commit}
+              onKeyDown={handleRenameKeyDown}
+              onClick={(e) => e.stopPropagation()}
+            />
+            {errorMsg && (
+              <div className="absolute left-0 top-full mt-0.5 z-50 whitespace-nowrap rounded bg-red-600 px-2 py-0.5 text-[11px] text-white shadow">
+                {errorMsg}
+              </div>
+            )}
+          </div>
+        ) : (
+          <span className="truncate text-[13px] font-medium text-mint-text">
+            {item.type === "file" ? item.name.replace(/\.md$/, "") : item.name}
+          </span>
+        )}
       </span>
       <span className="text-right text-xs text-[#9CA3AF]">
         {item.lastModified}
@@ -86,7 +151,7 @@ export function FolderListItem({ item, onClick: _onClick }: FolderListItemProps)
             <button
               className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-mint-text hover:bg-mint-hover/60"
               type="button"
-              onClick={handleRename}
+              onClick={startRename}
             >
               <span className="material-symbols-outlined text-[14px]">edit</span>
               <span>重命名</span>

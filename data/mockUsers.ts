@@ -14,6 +14,7 @@ export const MOCK_USERS: MockUser[] = [
     avatar: '演',
     membership: 'pro',
     createdAt: '2025-01-15T08:00:00Z',
+    updatedAt: '2025-01-15T08:00:00Z',
   },
   {
     id: 'user-002',
@@ -24,6 +25,7 @@ export const MOCK_USERS: MockUser[] = [
     avatar: '管',
     membership: 'enterprise',
     createdAt: '2025-02-20T10:30:00Z',
+    updatedAt: '2025-02-20T10:30:00Z',
   },
   {
     id: 'user-003',
@@ -34,6 +36,7 @@ export const MOCK_USERS: MockUser[] = [
     avatar: '测',
     membership: 'free',
     createdAt: '2025-05-01T14:00:00Z',
+    updatedAt: '2025-05-01T14:00:00Z',
   },
 ]
 
@@ -70,5 +73,6 @@ function stripPassword(user: MockUser): User {
     avatar: user.avatar,
     membership: user.membership,
     createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
   }
 }
