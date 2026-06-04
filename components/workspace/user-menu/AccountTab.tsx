@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ChangeEvent } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/store/authStore";
 import {
@@ -22,7 +23,7 @@ function maskPhone(phone: string): string {
 }
 
 export function AccountTab() {
-  const { user, updateUser, updateEmail, uploadAvatar, deleteAccount, logoutAndClear, changePassword } = useAuth();
+  const { user, updateUser, updateEmail, uploadAvatar, deleteAccount, changePassword } = useAuth();
   const router = useRouter();
 
   const [displayName, setDisplayName] = useState(user?.fullName ?? "临时账号");
@@ -206,9 +207,9 @@ export function AccountTab() {
           <h3 className="mb-1 text-base font-semibold text-mint-text">个人信息</h3>
           <p className="mb-4 text-xs text-mint-muted">修改你的头像、用户名和邮箱地址</p>
           <div className="mb-6 flex items-center gap-4">
-            <div className="flex size-16 items-center justify-center rounded-full bg-mint-accent text-xl font-bold text-white shadow-sm overflow-hidden">
+            <div className="relative flex size-16 items-center justify-center rounded-full bg-mint-accent text-xl font-bold text-white shadow-sm overflow-hidden">
               {displayAvatar?.startsWith('http') ? (
-                <img src={displayAvatar} alt="头像" className="size-full object-cover" />
+                <Image src={displayAvatar} alt="头像" fill className="object-cover" sizes="64px" unoptimized />
               ) : (
                 displayAvatar
               )}
@@ -281,11 +282,11 @@ export function AccountTab() {
       <Modal open={profileModalOpen} onClose={() => setProfileModalOpen(false)} title="修改个人信息" width="sm">
         <div className="space-y-5 p-6">
           <div className="flex flex-col items-center gap-3">
-            <div className="flex size-20 items-center justify-center rounded-full bg-mint-accent text-2xl font-bold text-white shadow-sm overflow-hidden">
+            <div className="relative flex size-20 items-center justify-center rounded-full bg-mint-accent text-2xl font-bold text-white shadow-sm overflow-hidden">
               {profileAvatarPreview ? (
-                <img src={profileAvatarPreview} alt="头像预览" className="size-20 rounded-full object-cover" />
+                <Image src={profileAvatarPreview} alt="头像预览" fill className="object-cover" sizes="80px" unoptimized />
               ) : displayAvatar?.startsWith('http') ? (
-                <img src={displayAvatar} alt="当前头像" className="size-20 rounded-full object-cover" />
+                <Image src={displayAvatar} alt="当前头像" fill className="object-cover" sizes="80px" unoptimized />
               ) : (
                 displayAvatar
               )}

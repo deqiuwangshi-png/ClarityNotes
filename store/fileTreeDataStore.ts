@@ -9,7 +9,6 @@ import {
   moveToTrash,
   getDefaultRoot,
   isRootNode,
-  addChildToTree,
 } from "@/lib/services/fileTreeService"
 import { validateName } from "@/utils/validator"
 import { createNodeOrchestrator } from "@/lib/services/fileTreeOrchestrator"

@@ -17,7 +17,7 @@ interface FileTreeUIState {
   expand: (id: string) => void
 }
 
-export const useFileTreeUIStore = create<FileTreeUIState>()((set, get) => ({
+export const useFileTreeUIStore = create<FileTreeUIState>()((set) => ({
   selectedNodeId: null,
   expandedIds: new Set<string>(),
   currentView: "folder",

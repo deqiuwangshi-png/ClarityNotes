@@ -18,11 +18,11 @@ export default function AuthPage() {
   const router = useRouter();
 
   const handleLoginSubmit = useCallback(
-    async ({ email, password, rememberMe }: { email: string; password: string; rememberMe?: boolean }) => {
+    async ({ email, password }: { email: string; password: string }) => {
       setIsSubmitting(true);
       setSubmitError(null);
       try {
-        const result = await login(email, password, rememberMe);
+        const result = await login(email, password);
         if (result.success) {
           router.push("/workspace");
         } else {

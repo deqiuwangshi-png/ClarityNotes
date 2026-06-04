@@ -63,10 +63,10 @@ export default function WorkspacePage() {
   // 在回收站视图中点击任意文件树节点 → 自动切换回工作区
   useEffect(() => {
     if (workspaceView === "trash") {
-      setWorkspaceView("workspace")
+      const timer = setTimeout(() => setWorkspaceView("workspace"), 0)
+      return () => clearTimeout(timer)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lastClickTimestamp])
+  }, [lastClickTimestamp, workspaceView])
 
   const handleBreadcrumbClick = useCallback(
     (id: string) => selectNode(id),
