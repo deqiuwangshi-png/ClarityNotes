@@ -4,6 +4,7 @@ import { useState } from "react";
 import { FormInput } from "@/components/ui/form-input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SubmitButton } from "@/components/ui/submit-button";
+import { PasswordToggle } from "@/components/ui/password-toggle";
 import type { RegisterPayload } from "@/types/auth";
 
 interface AuthFormProps {
@@ -21,6 +22,8 @@ export function AuthForm({ type, isSubmitting, onSubmit, serverError }: AuthForm
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const isLogin = type === "login";
@@ -93,46 +96,52 @@ export function AuthForm({ type, isSubmitting, onSubmit, serverError }: AuthForm
         />
         <FormInput
           label={isLogin ? "密码" : "设置密码"}
-          type="password"
+          type={showPassword ? "text" : "password"}
           placeholder={isLogin ? "••••••••" : "至少 8 位字符"}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           error={errors.password}
           disabled={isSubmitting}
-          rightSlot={
-            isLogin ? (
-              <a
-                href="#"
-                className="text-xs font-medium text-primary hover:underline"
-                onClick={(e) => {
-                  e.preventDefault();
-                  console.log("【预留路由】忘记密码");
-                }}
-              >
-                忘记密码？
-              </a>
-            ) : undefined
+          suffix={
+            <PasswordToggle
+              visible={showPassword}
+              onToggle={() => setShowPassword((v) => !v)}
+            />
           }
         />
         {!isLogin && (
           <FormInput
             label="确认密码"
-            type="password"
+            type={showConfirmPassword ? "text" : "password"}
             placeholder="重复您的密码"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             error={errors.confirmPassword}
             disabled={isSubmitting}
+            suffix={
+              <PasswordToggle
+                visible={showConfirmPassword}
+                onToggle={() => setShowConfirmPassword((v) => !v)}
+              />
+            }
           />
         )}
         {isLogin && (
-          <Checkbox
-            id="remember"
-            label="记住我"
-            checked={rememberMe}
-            onChange={setRememberMe}
-            disabled={isSubmitting}
-          />
+          <div className="flex items-center justify-between px-1">
+            <Checkbox
+              id="remember"
+              label="记住我"
+              checked={rememberMe}
+              onChange={setRememberMe}
+              disabled={isSubmitting}
+            />
+            <a
+              href="/forgot-password"
+              className="text-xs font-medium text-primary hover:underline"
+            >
+              忘记密码？
+            </a>
+          </div>
         )}
         {!isLogin && <div className="pt-4" />}
         <SubmitButton label={isLogin ? "立即登录" : "免费注册"} loading={isSubmitting} />

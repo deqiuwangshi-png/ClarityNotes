@@ -1,8 +1,11 @@
 import { create } from "zustand"
-import type { SearchResultItem } from "@/types/fileTree"
+import type { SearchResultItem, TreeNode } from "@/types/fileTree"
 import { searchNodes } from "@/lib/services/searchService"
-import { useFileTreeStore } from "@/store/fileTreeStore"
-import { supabaseAuthRepo } from "@/repositories"
+import {
+  getRecentSearches,
+  addRecentSearch,
+  removeRecentSearch,
+} from "@/utils/recentSearches"
 
 const DEBOUNCE_DELAY = 300
 
@@ -12,9 +15,9 @@ interface SearchState {
   isSearching: boolean
   recentSearches: string[]
 
-  setQuery: (value: string) => void
+  setQuery: (value: string, tree: TreeNode[]) => void
   clearSearch: () => void
-  searchFromRecent: (term: string) => void
+  searchFromRecent: (term: string, tree: TreeNode[]) => void
   removeRecentSearch: (term: string) => void
 }
 
@@ -25,9 +28,9 @@ export const useSearchStore = create<SearchState>()((set) => {
     query: "",
     results: [],
     isSearching: false,
-    recentSearches: supabaseAuthRepo.getRecentSearches(),
+    recentSearches: getRecentSearches(),
 
-    setQuery: (value: string) => {
+    setQuery: (value: string, tree: TreeNode[]) => {
       set({ query: value })
 
       if (_debounceTimer !== null) clearTimeout(_debounceTimer)
@@ -39,9 +42,8 @@ export const useSearchStore = create<SearchState>()((set) => {
       }
 
       _debounceTimer = setTimeout(() => {
-        const tree = useFileTreeStore.getState().getTree()
         const results = searchNodes(tree, trimmed)
-        const updated = supabaseAuthRepo.addRecentSearch(trimmed)
+        const updated = addRecentSearch(trimmed)
         set({ results, isSearching: true, recentSearches: updated })
       }, DEBOUNCE_DELAY)
     },
@@ -52,14 +54,13 @@ export const useSearchStore = create<SearchState>()((set) => {
       set({ query: "", results: [], isSearching: false })
     },
 
-    searchFromRecent: (term: string) => {
-      const tree = useFileTreeStore.getState().getTree()
+    searchFromRecent: (term: string, tree: TreeNode[]) => {
       const results = searchNodes(tree, term)
       set({ query: term, results, isSearching: true })
     },
 
     removeRecentSearch: (term: string) => {
-      const updated = supabaseAuthRepo.removeRecentSearch(term)
+      const updated = removeRecentSearch(term)
       set({ recentSearches: updated })
     },
   }

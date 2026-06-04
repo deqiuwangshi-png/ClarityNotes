@@ -2,7 +2,7 @@
 
 import { useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/auth-context";
+import { useAuth } from "@/store/authStore";
 import {
   validateFullName,
   validatePhone,
@@ -22,7 +22,7 @@ function maskPhone(phone: string): string {
 }
 
 export function AccountTab() {
-  const { user, updateUser, logoutAndClear, changePassword } = useAuth();
+  const { user, updateUser, updateEmail, uploadAvatar, deleteAccount, logoutAndClear, changePassword } = useAuth();
   const router = useRouter();
 
   const [displayName, setDisplayName] = useState(user?.fullName ?? "临时账号");
@@ -97,13 +97,15 @@ export function AccountTab() {
     setProfileNameError("");
     const trimmed = profileName.trim();
     setDisplayName(trimmed);
+
     if (profileAvatarFile) {
-      const firstChar = trimmed.charAt(0);
-      setDisplayAvatar(firstChar);
-      await updateUser({ fullName: trimmed, avatar: firstChar });
-    } else {
-      await updateUser({ fullName: trimmed });
+      // 实际上传头像到存储桶
+      const result = await uploadAvatar(profileAvatarFile);
+      if (result.url) {
+        setDisplayAvatar(result.url);
+      }
     }
+    await updateUser({ fullName: trimmed });
     setProfileModalOpen(false);
     triggerToast("个人信息修改成功");
   };
@@ -140,10 +142,14 @@ export function AccountTab() {
       return;
     }
     setEmailError("");
+    const result = await updateEmail(emailInput);
+    if (!result.success) {
+      setEmailError(result.error ?? '邮箱修改失败');
+      return;
+    }
     setDisplayEmail(emailInput);
-    await updateUser({ email: emailInput });
     setEmailModalOpen(false);
-    triggerToast("邮箱修改成功");
+    triggerToast("邮箱修改成功，请前往新邮箱确认");
   };
 
   const openPasswordModal = () => {
@@ -184,9 +190,11 @@ export function AccountTab() {
     setDeleteConfirmOpen(true);
   };
 
-  const handleDeleteAccount = () => {
-    logoutAndClear();
-    router.push("/");
+  const handleDeleteAccount = async () => {
+    const result = await deleteAccount();
+    if (result.success) {
+      router.push("/");
+    }
   };
 
   const deleteCanConfirm = deleteInput === "我已经知晓" && deleteChecked;
@@ -198,8 +206,12 @@ export function AccountTab() {
           <h3 className="mb-1 text-base font-semibold text-mint-text">个人信息</h3>
           <p className="mb-4 text-xs text-mint-muted">修改你的头像、用户名和邮箱地址</p>
           <div className="mb-6 flex items-center gap-4">
-            <div className="flex size-16 items-center justify-center rounded-full bg-mint-accent text-xl font-bold text-white shadow-sm">
-              {displayAvatar}
+            <div className="flex size-16 items-center justify-center rounded-full bg-mint-accent text-xl font-bold text-white shadow-sm overflow-hidden">
+              {displayAvatar?.startsWith('http') ? (
+                <img src={displayAvatar} alt="头像" className="size-full object-cover" />
+              ) : (
+                displayAvatar
+              )}
             </div>
             <div className="space-y-1">
               <p className="text-sm font-medium text-mint-text">{displayName}</p>
@@ -269,9 +281,11 @@ export function AccountTab() {
       <Modal open={profileModalOpen} onClose={() => setProfileModalOpen(false)} title="修改个人信息" width="sm">
         <div className="space-y-5 p-6">
           <div className="flex flex-col items-center gap-3">
-            <div className="flex size-20 items-center justify-center rounded-full bg-mint-accent text-2xl font-bold text-white shadow-sm">
+            <div className="flex size-20 items-center justify-center rounded-full bg-mint-accent text-2xl font-bold text-white shadow-sm overflow-hidden">
               {profileAvatarPreview ? (
                 <img src={profileAvatarPreview} alt="头像预览" className="size-20 rounded-full object-cover" />
+              ) : displayAvatar?.startsWith('http') ? (
+                <img src={displayAvatar} alt="当前头像" className="size-20 rounded-full object-cover" />
               ) : (
                 displayAvatar
               )}

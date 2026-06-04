@@ -8,12 +8,17 @@ interface AuthContextValue {
   user: User | null
   isLoading: boolean
   isAuthenticated: boolean
-  login: (email: string, password: string, rememberMe?: boolean) => Promise<{ success: boolean; error?: string }>
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
   register: (payload: RegisterPayload) => Promise<{ success: boolean; error?: string }>
+  signInWithOAuth: (provider: 'google' | 'apple') => Promise<void>
   logout: () => Promise<void>
   logoutAndClear: () => Promise<void>
+  sendPasswordReset: (email: string) => Promise<{ success: boolean; error?: string }>
   updateUser: (updates: Partial<User>) => Promise<void>
   changePassword: (newPassword: string) => Promise<boolean>
+  updateEmail: (newEmail: string) => Promise<{ success: boolean; error?: string }>
+  uploadAvatar: (file: File) => Promise<{ url: string; error?: string }>
+  deleteAccount: () => Promise<{ success: boolean; error?: string }>
   clearError: () => void
   authError: string | null
 }
@@ -79,6 +84,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const signInWithOAuth = useCallback(async (provider: 'google' | 'apple') => {
+    await supabaseAuthRepo.signInWithOAuth(provider)
+  }, [])
+
   const logout = useCallback(async () => {
     setAuthError(null)
     await supabaseAuthRepo.signOut()
@@ -89,6 +98,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAuthError(null)
     await supabaseAuthRepo.signOut()
     setUser(null)
+  }, [])
+
+  const sendPasswordReset = useCallback(async (email: string) => {
+    setAuthError(null)
+    const result = await supabaseAuthRepo.sendPasswordReset(email)
+    if (!result.success) {
+      setAuthError(result.error!)
+    }
+    return result
   }, [])
 
   const clearError = useCallback(() => {
@@ -108,16 +126,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return result.success
   }, [])
 
+  const updateEmail = useCallback(async (newEmail: string) => {
+    const result = await supabaseAuthRepo.updateEmail(newEmail)
+    if (result.success) {
+      setUser((prev) => {
+        if (!prev) return prev
+        return { ...prev, email: newEmail }
+      })
+    }
+    return result
+  }, [])
+
+  const uploadAvatar = useCallback(async (file: File) => {
+    if (!user) return { url: '', error: '未登录' }
+    const result = await supabaseAuthRepo.uploadAvatar(user.id, file)
+    if (result.url) {
+      setUser((prev) => {
+        if (!prev) return prev
+        return { ...prev, avatar: result.url }
+      })
+    }
+    return result
+  }, [user])
+
+  const deleteAccount = useCallback(async () => {
+    if (!user) {
+      return { success: false, error: '未登录' }
+    }
+    const result = await supabaseAuthRepo.deleteAccount(user.id)
+    if (result.success) {
+      await supabaseAuthRepo.signOut()
+      setUser(null)
+    }
+    return result
+  }, [user])
+
   const value: AuthContextValue = {
     user,
     isLoading,
     isAuthenticated: !!user,
     login,
     register,
+    signInWithOAuth,
     logout,
     logoutAndClear,
+    sendPasswordReset,
     updateUser,
     changePassword,
+    updateEmail,
+    uploadAvatar,
+    deleteAccount,
     clearError,
     authError,
   }

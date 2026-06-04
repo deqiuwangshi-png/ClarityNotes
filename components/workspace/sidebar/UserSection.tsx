@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/auth-context";
+import { useAuth } from "@/store/authStore";
 import { UserMenu, type UserMenuItem } from "@/components/workspace/user-menu/UserMenu";
 import { AccountSettingsDialog } from "@/components/workspace/user-menu/AccountSettingsDialog";
 import { MembershipDialog } from "@/components/workspace/user-menu/MembershipDialog";

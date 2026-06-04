@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { FOOTER_SECTIONS, SOCIAL_ICONS } from "@/constants/landing";
 
 export function Footer() {
@@ -12,8 +13,14 @@ export function Footer() {
         <div className="grid grid-cols-1 gap-8 pb-8 md:grid-cols-5">
           <div className="md:col-span-2">
             <div className="mb-4 flex items-center gap-2">
-              <div className="flex size-8 items-center justify-center rounded-xl bg-primary text-white">
-                <span className="material-symbols-outlined text-sm">draw</span>
+              <div className="relative flex size-8 items-center justify-center overflow-hidden rounded-xl">
+                <Image
+                  src="/1.svg"
+                  alt="ClarityNotes"
+                  fill
+                  className="object-cover"
+                  sizes="32px"
+                />
               </div>
               <span className="text-xl font-bold text-primary">ClarityNotes</span>
             </div>

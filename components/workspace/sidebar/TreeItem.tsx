@@ -1,49 +1,17 @@
 "use client";
 
-import { useState, useRef, useCallback, memo } from "react";
+import { useCallback, memo } from "react";
 import type { TreeNode } from "@/types/fileTree";
 import { useFileTreeStore } from "@/store/fileTreeStore";
 import { useUiStore } from "@/store/uiStore";
+import { useTreeItemRename } from "@/hooks/use-tree-item-rename";
+import { FolderIcon, FileIcon } from "@/components/workspace/sidebar/TreeItemIcons";
 import { TreeItemMenu } from "@/components/workspace/sidebar/TreeItemMenu";
 
 interface TreeItemProps {
   node: TreeNode;
   selectedId: string | null;
   maxLevel: number;
-}
-
-function FolderIcon({ selected }: { selected: boolean }) {
-  const fill = selected ? "#007A66" : "#6B7280";
-  const innerFill = selected ? "#E4F5EF" : "#F6FAF8";
-  return (
-    <svg aria-hidden="true" className="size-[18px] shrink-0" fill="none" viewBox="0 0 20 20">
-      <path d="M2.75 5.75c0-.83.67-1.5 1.5-1.5h3.1c.43 0 .84.18 1.12.5l.92 1h6.36c.83 0 1.5.67 1.5 1.5v1.1H2.75v-2.6Z" fill={fill} opacity="0.18" />
-      <path d="M2.75 7.25h14.5v6.5c0 .83-.67 1.5-1.5 1.5H4.25c-.83 0-1.5-.67-1.5-1.5v-6.5Z" fill={innerFill} />
-      <path d="M2.75 7.25v-1.5c0-.83.67-1.5 1.5-1.5h3.1c.43 0 .84.18 1.12.5l.92 1h6.36c.83 0 1.5.67 1.5 1.5v6.5c0 .83-.67 1.5-1.5 1.5H4.25c-.83 0-1.5-.67-1.5-1.5v-6.5Z" stroke={fill} strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.4" />
-    </svg>
-  );
-}
-
-function FileIcon({ selected }: { selected: boolean }) {
-  const fill = selected ? "#007A66" : "#6B7280";
-  const innerFill = selected ? "#E4F5EF" : "#FFFFFF";
-  return (
-    <svg aria-hidden="true" className="size-[18px] shrink-0" fill="none" viewBox="0 0 20 20">
-      <path d="M5 2.75h6.5L15 6.25v11H5v-14Z" fill={innerFill} />
-      <path d="M11.5 2.75v3.5H15M5 2.75h6.5L15 6.25v11H5v-14Z" stroke={fill} strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.4" />
-      <path d="M7.5 9.25h5M7.5 12h5" stroke={fill} strokeLinecap="round" strokeWidth="1.2" />
-    </svg>
-  );
-}
-
-function useAutoFocusAndSelect(inputRef: React.RefObject<HTMLInputElement | null>, active: boolean) {
-  const input = inputRef.current;
-  if (active && input) {
-    requestAnimationFrame(() => {
-      input.focus();
-      input.select();
-    });
-  }
 }
 
 const TreeItem = memo(function TreeItem({
@@ -73,43 +41,14 @@ const TreeItem = memo(function TreeItem({
 
   const isCreating = creatingNodeId === node.id;
 
-  const [renaming, setRenaming] = useState(false);
-  const [renameValue, setRenameValue] = useState(node.name);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useAutoFocusAndSelect(inputRef, renaming || isCreating);
-
-  const commit = useCallback(() => {
-    const trimmed = renameValue.trim();
-    if (!trimmed) { setErrorMsg("名称不能为空"); return; }
-    if (isCreating) {
-      const error = validateCreateName(node.id, renameValue);
-      if (error) { setErrorMsg(error); return; }
-      commitRename(node.id, trimmed);
-    } else {
-      const error = validateCreateName(node.id, renameValue);
-      if (error) { setErrorMsg(error); return; }
-      commitRename(node.id, trimmed);
-      setRenaming(false);
-    }
-    setErrorMsg(null);
-  }, [renameValue, node.id, isCreating, validateCreateName, commitRename]);
-
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === "Enter") commit();
-    else if (e.key === "Escape") {
-      if (isCreating) cancelCreate(node.id);
-      else { setRenaming(false); setRenameValue(node.name); setErrorMsg(null); }
-    }
-  }, [commit, isCreating, cancelCreate, node.id, node.name]);
-
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setRenameValue(e.target.value);
-    if (errorMsg) setErrorMsg(null);
-  }, [errorMsg]);
-
-  const inputBorder = errorMsg ? "border-red-400" : "border-mint-accent";
+  const rename = useTreeItemRename({
+    nodeId: node.id,
+    nodeName: node.name,
+    isCreating,
+    validateCreateName,
+    commitRename,
+    cancelCreate,
+  });
 
   const handleDelete = useCallback(async () => {
     const confirmed = await openConfirm({
@@ -123,6 +62,8 @@ const TreeItem = memo(function TreeItem({
     }
   }, [node, openConfirm, deleteNode]);
 
+  const inputBorder = rename.errorMsg ? "border-red-400" : "border-mint-accent";
+
   return (
     <>
       <div
@@ -135,7 +76,7 @@ const TreeItem = memo(function TreeItem({
         aria-expanded={isFolder ? isExpanded : undefined}
         aria-selected={isSelected}
         aria-label={node.name}
-        onClick={() => { if (!renaming) selectNode(node.id); }}
+        onClick={() => { if (!rename.renaming) selectNode(node.id); }}
       >
         {isFolder ? (
           <span className="flex size-4 shrink-0 items-center justify-center" role="button" tabIndex={0} aria-label={isExpanded ? "折叠" : "展开"} onClick={(e) => { e.stopPropagation(); toggleExpand(node.id); }}>
@@ -147,20 +88,20 @@ const TreeItem = memo(function TreeItem({
 
         {isFolder ? <FolderIcon selected={isSelected} /> : <FileIcon selected={isSelected} />}
 
-        {(renaming || isCreating) ? (
+        {(rename.renaming || isCreating) ? (
           <div className="flex-1 relative">
             <input
-              ref={inputRef}
+              ref={rename.inputRef}
               className={`w-full truncate rounded border bg-white px-1 box-border text-[13px] text-mint-text outline-none font-inherit m-0 py-0 appearance-none min-w-0 leading-normal ${inputBorder}`}
-              value={renameValue}
+              value={rename.renameValue}
               onClick={(e) => e.stopPropagation()}
-              onChange={handleChange}
-              onBlur={commit}
-              onKeyDown={handleKeyDown}
+              onChange={rename.handleChange}
+              onBlur={rename.commit}
+              onKeyDown={rename.handleKeyDown}
             />
-            {errorMsg && (
+            {rename.errorMsg && (
               <div className="absolute left-0 top-full mt-0.5 z-50 whitespace-nowrap rounded bg-red-600 px-2 py-0.5 text-[11px] text-white shadow">
-                {errorMsg}
+                {rename.errorMsg}
               </div>
             )}
           </div>
@@ -174,7 +115,7 @@ const TreeItem = memo(function TreeItem({
           isRoot={isRoot}
           onCreateFolder={() => createFolder(node.id)}
           onCreateFile={() => createFile(node.id)}
-          onRenameStart={() => { setRenaming(true); setRenameValue(node.name); setErrorMsg(null); }}
+          onRenameStart={rename.startRename}
           onDelete={handleDelete}
         />
       </div>

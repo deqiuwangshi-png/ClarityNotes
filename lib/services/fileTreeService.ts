@@ -1,8 +1,7 @@
 import type { TreeNode, BreadcrumbItem, TrashItemData } from "@/types/fileTree"
-import { MAX_DEPTH, DEFAULT_NAME, DEFAULT_ROOT_ID } from "@/constants/fileTree"
-import { generateId } from "@/utils/idGenerator"
+import { DEFAULT_ROOT_ID } from "@/constants/fileTree"
 import { formatTimestamp } from "@/utils/dateFormatter"
-import { validateName, generateUniqueName } from "@/utils/validator"
+import { validateName } from "@/utils/validator"
 
 export function findNode(nodes: TreeNode[], id: string): TreeNode | null {
   for (const node of nodes) {
@@ -49,46 +48,6 @@ export function buildBreadcrumb(tree: TreeNode[], targetId: string): BreadcrumbI
     }
   }
   return []
-}
-
-export function createNode(
-  tree: TreeNode[],
-  parentId: string,
-  type: "folder" | "file",
-  desiredName?: string,
-): { newTree: TreeNode[]; createdNode: TreeNode } | { error: string } {
-  const parent = findNode(tree, parentId)
-  if (!parent) return { error: "父节点不存在" }
-  if (parent.type !== "folder") return { error: "只能在文件夹下创建" }
-  if (parent.level >= MAX_DEPTH) return { error: `最大嵌套深度为 ${MAX_DEPTH} 层` }
-
-  const existingNames = (parent.children ?? [])
-    .filter((c) => c.type === type)
-    .map((c) => c.name)
-  const baseName = desiredName ?? DEFAULT_NAME
-  const name = generateUniqueName(baseName, existingNames)
-  const now = formatTimestamp()
-  const newId = generateId()
-
-  const createdNode: TreeNode = {
-    id: newId,
-    name,
-    type,
-    level: parent.level + 1,
-    expanded: false,
-    createdAt: now,
-    updatedAt: now,
-    ...(type === "folder" ? { children: [] } : {}),
-    ...(type === "file" ? { wordCount: 0 } : {}),
-  }
-
-  const newTree = structuredClone(tree)
-  const targetParent = findNode(newTree, parentId)!
-  if (!targetParent.children) targetParent.children = []
-  targetParent.children.push(createdNode)
-  targetParent.expanded = true
-
-  return { newTree, createdNode }
 }
 
 export function renameNode(

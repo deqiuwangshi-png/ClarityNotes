@@ -1,10 +1,13 @@
 import { createClient } from '@/lib/supabase/client'
 import type { User, RegisterPayload, AuthResponse } from '@/types/auth'
-import type { ISupabaseAuthRepository } from '@/repositories/types'
+import type { ISupabaseAuthRepository, UserSession } from '@/repositories/types'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 
-const SEARCH_RECENT_KEY = 'claritynotes_recent_searches'
-const MAX_RECENT = 5
+function generateUid(): string {
+  return Array.from(crypto.getRandomValues(new Uint8Array(4)))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
+}
 
 export class SupabaseAuthRepository implements ISupabaseAuthRepository {
   async signIn(email: string, password: string): Promise<AuthResponse> {
@@ -20,11 +23,16 @@ export class SupabaseAuthRepository implements ISupabaseAuthRepository {
 
   async signUp(payload: RegisterPayload): Promise<AuthResponse> {
     const supabase = createClient()
+    const uid = generateUid()
+
     const { data, error } = await supabase.auth.signUp({
       email: payload.email,
       password: payload.password,
       options: {
-        data: { full_name: payload.fullName },
+        data: {
+          full_name: payload.fullName,
+          uid,
+        },
       },
     })
 
@@ -36,6 +44,17 @@ export class SupabaseAuthRepository implements ISupabaseAuthRepository {
     }
 
     return { success: true, user: this.mapUser(data.user) }
+  }
+
+  async signInWithOAuth(provider: 'google' | 'apple'): Promise<void> {
+    const supabase = createClient()
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: `${window.location.origin}/workspace`,
+      },
+    })
+    if (error) throw error
   }
 
   async signOut(): Promise<void> {
@@ -58,6 +77,17 @@ export class SupabaseAuthRepository implements ISupabaseAuthRepository {
     return () => data.subscription.unsubscribe()
   }
 
+  async sendPasswordReset(email: string): Promise<{ success: boolean; error?: string }> {
+    const supabase = createClient()
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    })
+    if (error) {
+      return { success: false, error: error.message }
+    }
+    return { success: true }
+  }
+
   async updatePassword(newPassword: string): Promise<{ success: boolean; error?: string }> {
     const supabase = createClient()
     const { error } = await supabase.auth.updateUser({ password: newPassword })
@@ -69,49 +99,114 @@ export class SupabaseAuthRepository implements ISupabaseAuthRepository {
 
   async updateProfile(updates: Partial<User>): Promise<{ success: boolean; error?: string }> {
     const supabase = createClient()
-    const data: Record<string, unknown> = {}
-    if (updates.fullName !== undefined) data.full_name = updates.fullName
-    if (updates.avatar !== undefined) data.avatar = updates.avatar
-    if (updates.phone !== undefined) data.phone = updates.phone
 
-    const { error } = await supabase.auth.updateUser({ data })
+    // 1. 更新 Supabase Auth user_metadata
+    const metaData: Record<string, unknown> = {}
+    if (updates.fullName !== undefined) metaData.full_name = updates.fullName
+    if (updates.avatar !== undefined) metaData.avatar = updates.avatar
+    if (updates.phone !== undefined) metaData.phone = updates.phone
+
+    if (Object.keys(metaData).length > 0) {
+      const { error: authError } = await supabase.auth.updateUser({ data: metaData })
+      if (authError) {
+        return { success: false, error: authError.message }
+      }
+    }
+
+    // 2. 同步到 public.profiles
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const profileData: Record<string, unknown> = {}
+      if (updates.fullName !== undefined) profileData.full_name = updates.fullName
+      if (updates.avatar !== undefined) profileData.avatar = updates.avatar
+      if (updates.phone !== undefined) profileData.phone = updates.phone
+
+      if (Object.keys(profileData).length > 0) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update(profileData)
+          .eq('id', user.id)
+
+        if (profileError) {
+          console.error('Failed to sync profiles:', profileError.message)
+        }
+      }
+    }
+
+    return { success: true }
+  }
+
+  async deleteAccount(userId: string): Promise<{ success: boolean; error?: string }> {
+    const supabase = createClient()
+    const { error } = await supabase.rpc('delete_user_account', {
+      target_user_id: userId,
+    })
     if (error) {
       return { success: false, error: error.message }
     }
     return { success: true }
   }
 
-  getRecentSearches(): string[] {
-    if (typeof window === 'undefined') return []
-    try {
-      const raw = localStorage.getItem(SEARCH_RECENT_KEY)
-      return raw ? (JSON.parse(raw) as string[]) : []
-    } catch {
-      return []
+  async updateEmail(newEmail: string): Promise<{ success: boolean; error?: string }> {
+    const supabase = createClient()
+    const { error } = await supabase.auth.updateUser({ email: newEmail })
+    if (error) {
+      return { success: false, error: error.message }
     }
+    // 同步到 profiles
+    await supabase.from('profiles').update({ email: newEmail }).eq('id', (await supabase.auth.getUser()).data.user?.id ?? '')
+    return { success: true }
   }
 
-  addRecentSearch(term: string): string[] {
-    if (typeof window === 'undefined') return [term]
-    const current = this.getRecentSearches()
-    const updated = [term, ...current.filter((r) => r !== term)].slice(0, MAX_RECENT)
-    try {
-      localStorage.setItem(SEARCH_RECENT_KEY, JSON.stringify(updated))
-    } catch {
-      /* ignore quota */
+  async uploadAvatar(userId: string, file: File): Promise<{ url: string; error?: string }> {
+    const supabase = createClient()
+    const ext = file.name.split('.').pop() ?? 'png'
+    const filePath = `${userId}/avatar_${Date.now()}.${ext}`
+
+    const { error: uploadError } = await supabase.storage
+      .from('touxiang')
+      .upload(filePath, file, { upsert: true })
+
+    if (uploadError) {
+      return { url: '', error: uploadError.message }
     }
-    return updated
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('touxiang')
+      .getPublicUrl(filePath)
+
+    // 更新 profiles.avatar
+    await supabase.from('profiles').update({ avatar: publicUrl }).eq('id', userId)
+    // 更新 auth metadata
+    await supabase.auth.updateUser({ data: { avatar: publicUrl } })
+
+    return { url: publicUrl }
   }
 
-  removeRecentSearch(term: string): string[] {
-    if (typeof window === 'undefined') return []
-    const updated = this.getRecentSearches().filter((r) => r !== term)
-    try {
-      localStorage.setItem(SEARCH_RECENT_KEY, JSON.stringify(updated))
-    } catch {
-      /* ignore quota */
-    }
-    return updated
+  async getSessions(): Promise<UserSession[]> {
+    const supabase = createClient()
+    const { data, error } = await supabase.rpc('get_user_sessions')
+    if (error || !data) return []
+    return (data as Array<{
+      id: string
+      user_agent: string | null
+      ip: string | null
+      created_at: string
+      updated_at: string
+      is_current: boolean
+    }>).map((s) => ({
+      id: s.id,
+      userAgent: s.user_agent,
+      ip: s.ip,
+      createdAt: s.created_at,
+      updatedAt: s.updated_at,
+      isCurrent: s.is_current,
+    }))
+  }
+
+  async removeSession(sessionId: string): Promise<void> {
+    const supabase = createClient()
+    await supabase.rpc('remove_user_session', { session_id: sessionId })
   }
 
   private mapUser(supabaseUser: SupabaseUser): User {

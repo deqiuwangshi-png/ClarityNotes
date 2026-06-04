@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/auth-context";
+import { useAuth } from "@/store/authStore";
 import LandingPage from "@/components/landing/landing-page";
 
 export default function HomePage() {

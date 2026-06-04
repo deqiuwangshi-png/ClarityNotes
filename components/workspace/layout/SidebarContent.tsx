@@ -8,6 +8,7 @@ import { SearchResultsView } from "@/components/workspace/sidebar/SearchResultsV
 import { SidebarFooter } from "@/components/workspace/sidebar/SidebarFooter"
 import { useSearchStore } from "@/store/searchStore"
 import { useFileTreeStore } from "@/store/fileTreeStore"
+import { useFileTreeDataStore } from "@/store/fileTreeDataStore"
 
 interface SidebarContentProps {
   isTrashActive: boolean
@@ -25,14 +26,23 @@ export function SidebarContent({ isTrashActive, onToggleSidebar, onTrashClick }:
   const removeRecentSearch = useSearchStore((s) => s.removeRecentSearch)
   const selectNode = useFileTreeStore((s) => s.selectNode)
 
+  const tree = useFileTreeDataStore((s) => s.getTree())
+
   const handleSearchSelect = useCallback(
     (nodeId: string) => selectNode(nodeId),
     [selectNode],
   )
   const handleSearchClear = useCallback(() => clearSearch(), [clearSearch])
   const handleSearchRecent = useCallback(
-    (term: string) => searchFromRecent(term),
-    [searchFromRecent],
+    (term: string) => searchFromRecent(term, tree),
+    [searchFromRecent, tree],
+  )
+  const handleQueryChange = useCallback(
+    (value: string) => {
+      const setQuery = useSearchStore.getState().setQuery
+      setQuery(value, tree)
+    },
+    [tree],
   )
   const handleRemoveRecentSearch = useCallback(
     (term: string) => removeRecentSearch(term),
@@ -42,7 +52,7 @@ export function SidebarContent({ isTrashActive, onToggleSidebar, onTrashClick }:
   return (
     <div className="flex flex-col h-full p-5">
       <UserSection onToggleSidebar={onToggleSidebar} />
-      <SearchBar onClear={handleSearchClear} />
+      <SearchBar onClear={handleSearchClear} onQueryChange={handleQueryChange} />
       {isSearching && searchQuery ? (
         <SearchResultsView
           results={searchResults}

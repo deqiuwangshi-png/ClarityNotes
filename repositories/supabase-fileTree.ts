@@ -32,20 +32,6 @@ export class SupabaseFileTreeRepository implements IFileTreeRepository {
   }): Promise<string> {
     const supabase = createClient()
 
-    // 前端防御：禁止为已有根节点的用户创建第二个根
-    if (params.parent_id === null) {
-      const { data: existing } = await supabase
-        .from('file_tree')
-        .select('id')
-        .eq('user_id', params.user_id)
-        .is('parent_id', null)
-        .maybeSingle()
-
-      if (existing) {
-        throw new Error('根节点已存在，不允许创建第二个根')
-      }
-    }
-
     const { data, error } = await supabase
       .from('file_tree')
       .insert(params)
@@ -62,27 +48,6 @@ export class SupabaseFileTreeRepository implements IFileTreeRepository {
       .from('file_tree')
       .update(updates)
       .eq('id', id)
-    if (error) throw error
-  }
-
-  async upsertDocument(fileId: string, content: DocNode, wordCount: number, expectedUpdatedAt?: string): Promise<void> {
-    const supabase = createClient()
-
-    if (expectedUpdatedAt) {
-      const { data: existing } = await supabase
-        .from('documents')
-        .select('updated_at')
-        .eq('file_id', fileId)
-        .single()
-
-      if (existing && existing.updated_at !== expectedUpdatedAt) {
-        throw new Error('CONFLICT: 文档已被其他会话修改')
-      }
-    }
-
-    const { error } = await supabase
-      .from('documents')
-      .upsert({ file_id: fileId, content, word_count: wordCount }, { onConflict: 'file_id' })
     if (error) throw error
   }
 

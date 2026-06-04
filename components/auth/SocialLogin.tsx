@@ -1,25 +1,25 @@
 "use client";
 
+import { useAuth } from "@/store/authStore";
 import { cn } from "@/lib/utils";
 
 interface SocialLoginProps {
   disabled?: boolean;
-  onGoogleClick?: () => void;
-  onAppleClick?: () => void;
 }
 
-const SOCIAL_PROVIDERS = [
-  { icon: "cloud", label: "Google", onClickKey: "onGoogleClick" as const },
-  { icon: "phone_iphone", label: "Apple", onClickKey: "onAppleClick" as const },
+const PROVIDERS = [
+  { provider: "google", label: "Google", icon: "cloud" },
+  { provider: "apple", label: "Apple", icon: "phone_iphone" },
 ] as const;
 
-export function SocialLogin({ disabled, onGoogleClick, onAppleClick }: SocialLoginProps) {
-  const handleSocialClick = (provider: typeof SOCIAL_PROVIDERS[number]) => {
-    const handler = provider.onClickKey === "onGoogleClick" ? onGoogleClick : onAppleClick;
-    if (handler) {
-      handler();
-    } else {
-      alert("第三方登录演示模式");
+export function SocialLogin({ disabled }: SocialLoginProps) {
+  const { signInWithOAuth } = useAuth();
+
+  const handleClick = async (provider: "google" | "apple") => {
+    try {
+      await signInWithOAuth(provider);
+    } catch {
+      // OAuth 流程会跳转页面，错误由 Supabase 处理
     }
   };
 
@@ -34,10 +34,10 @@ export function SocialLogin({ disabled, onGoogleClick, onAppleClick }: SocialLog
         </div>
       </div>
       <div className="grid grid-cols-2 gap-4">
-        {SOCIAL_PROVIDERS.map((provider) => (
+        {PROVIDERS.map(({ provider, label, icon }) => (
           <button
-            key={provider.label}
-            onClick={() => handleSocialClick(provider)}
+            key={provider}
+            onClick={() => handleClick(provider)}
             disabled={disabled}
             className={cn(
               "group flex items-center justify-center gap-3 rounded-xl border border-outline-variant bg-white py-3 transition-all hover:bg-surface",
@@ -45,9 +45,9 @@ export function SocialLogin({ disabled, onGoogleClick, onAppleClick }: SocialLog
             )}
           >
             <span className="material-symbols-outlined text-[20px] text-on-surface transition-transform group-hover:scale-110">
-              {provider.icon}
+              {icon}
             </span>
-            <span className="text-sm font-medium">{provider.label}</span>
+            <span className="text-sm font-medium">{label}</span>
           </button>
         ))}
       </div>

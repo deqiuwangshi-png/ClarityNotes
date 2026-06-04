@@ -1,25 +1,35 @@
 import type { User, RegisterPayload, AuthResponse } from "@/types/auth"
 import type { TreeNode, TrashItemData, DocNode } from "@/types/fileTree"
 
-export interface IUserRepository {
-  findUserByEmail(email: string): User | undefined
-  findUserCredentials(email: string, password: string): (User & { password: string }) | undefined
-  getPasswordForUser(userId: string): string | undefined
-  updatePassword(userId: string, newPassword: string): void
-  addUser(user: User & { password: string }): void
+export interface NotificationPrefs {
+  docUpdate: boolean
+  comment: boolean
+}
+
+export interface UserSession {
+  id: string
+  userAgent: string | null
+  ip: string | null
+  createdAt: string
+  updatedAt: string
+  isCurrent: boolean
 }
 
 export interface ISupabaseAuthRepository {
   signIn(email: string, password: string): Promise<AuthResponse>
   signUp(payload: RegisterPayload): Promise<AuthResponse>
+  signInWithOAuth(provider: 'google' | 'apple'): Promise<void>
   signOut(): Promise<void>
   getSession(): Promise<User | null>
   onAuthStateChange(callback: (user: User | null) => void): () => void
+  sendPasswordReset(email: string): Promise<{ success: boolean; error?: string }>
   updatePassword(newPassword: string): Promise<{ success: boolean; error?: string }>
   updateProfile(updates: Partial<User>): Promise<{ success: boolean; error?: string }>
-  getRecentSearches(): string[]
-  addRecentSearch(term: string): string[]
-  removeRecentSearch(term: string): string[]
+  deleteAccount(userId: string): Promise<{ success: boolean; error?: string }>
+  updateEmail(newEmail: string): Promise<{ success: boolean; error?: string }>
+  uploadAvatar(userId: string, file: File): Promise<{ url: string; error?: string }>
+  getSessions(): Promise<UserSession[]>
+  removeSession(sessionId: string): Promise<void>
 }
 
 // ── 实际数据库行类型（匹配 1.sql / docs/1.sql） ──
@@ -85,8 +95,11 @@ export interface IFileTreeRepository {
     sort_order: number
   }): Promise<string>
   updateNode(id: string, updates: { name?: string }): Promise<void>
-  upsertDocument(fileId: string, content: DocNode, wordCount: number, expectedUpdatedAt?: string): Promise<void>
   moveToTrash(nodeIds: string[]): Promise<void>
+}
+
+export interface IDocumentRepository {
+  upsert(fileId: string, content: DocNode, wordCount: number): Promise<string>
 }
 
 export interface ITrashRepository {
@@ -96,12 +109,9 @@ export interface ITrashRepository {
   clearTrash(): Promise<void>
 }
 
-export interface ISessionRepository {
-  createSession(user: User, rememberMe?: boolean): void
-  updateSessionUser(user: User): void
-  clearSession(): void
-  getCurrentUser(): User | null
-  clearAllData(): void
-  getRecentSearches(): string[]
-  setRecentSearches(searches: string[]): void
+export interface INotificationRepository {
+  getPrefs(): Promise<NotificationPrefs>
+  updatePrefs(prefs: NotificationPrefs): Promise<void>
 }
+
+

@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
-import { AuthProvider } from "@/lib/auth-context";
+import { AuthProvider } from "@/store/authStore";
 import { AppProviders } from "@/components/layout/app-providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "ClarityNotes",
   description: "清晰记录，整理思绪",
+  icons: {
+    icon: "/1.svg",
+  },
 };
 
 export default function RootLayout({

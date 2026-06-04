@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/auth-context";
+import { useAuth } from "@/store/authStore";
 import { useAuthTab } from "@/hooks/use-auth-tab";
 import { AuthCard } from "@/components/auth/auth-card";
 import { TabSwitcher } from "@/components/auth/tab-switcher";

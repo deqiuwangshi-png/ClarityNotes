@@ -4,11 +4,11 @@ import { useSearchStore } from "@/store/searchStore";
 
 interface SearchBarProps {
   onClear?: () => void;
+  onQueryChange?: (value: string) => void;
 }
 
-export function SearchBar({ onClear }: SearchBarProps) {
+export function SearchBar({ onClear, onQueryChange }: SearchBarProps) {
   const query = useSearchStore((s) => s.query);
-  const setQuery = useSearchStore((s) => s.setQuery);
   const clearSearch = useSearchStore((s) => s.clearSearch);
 
   const handleChange = (value: string) => {
@@ -17,7 +17,7 @@ export function SearchBar({ onClear }: SearchBarProps) {
       onClear?.();
       return;
     }
-    setQuery(value);
+    onQueryChange?.(value);
   };
 
   const handleClear = () => {

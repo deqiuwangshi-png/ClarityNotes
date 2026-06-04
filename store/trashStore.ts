@@ -1,7 +1,7 @@
 import { create } from "zustand"
 import type { TrashItemData } from "@/types/fileTree"
 import { trashRepo } from "@/repositories"
-import { useFileTreeStore } from "@/store/fileTreeStore"
+import { useFileTreeDataStore } from "@/store/fileTreeDataStore"
 import { formatTimestamp } from "@/utils/dateFormatter"
 
 interface TrashState {
@@ -77,7 +77,7 @@ export const useTrashStore = create<TrashState>()((set, get) => ({
     set((state) => ({ items: state.items.filter((i) => i.id !== itemId) }))
     try {
       await trashRepo.restoreItem(itemId)
-      await useFileTreeStore.getState().loadTree()
+      await useFileTreeDataStore.getState().loadTree()
     } catch {
       get().loadTrash()
     }
@@ -112,7 +112,7 @@ export const useTrashStore = create<TrashState>()((set, get) => ({
       await Promise.all(
         Array.from(selectedIds).map((id) => trashRepo.restoreItem(id))
       )
-      await useFileTreeStore.getState().loadTree()
+      await useFileTreeDataStore.getState().loadTree()
     } catch {
       get().loadTrash()
     }

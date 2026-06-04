@@ -2,12 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SidebarLayout } from "@/components/workspace/layout/SidebarLayout";
+import { WorkspaceSkeleton } from "@/components/workspace/layout/WorkspaceSkeleton";
 import { DocumentEditor } from "@/components/workspace/content/DocumentEditor";
 import { FolderView } from "@/components/workspace/content/FolderView";
 import { TrashContent } from "@/components/workspace/trash/TrashContent";
-import {
-  useFileTreeStore,
-} from "@/store/fileTreeStore";
+import { useFileTreeStore } from "@/store/fileTreeStore";
 import {
   useFolderItems,
   useBreadcrumb,
@@ -19,33 +18,11 @@ import { EDITOR_MENU_ACTIONS } from "@/constants/workspace";
 
 type WorkspaceView = "workspace" | "trash";
 
-function WorkspaceSkeleton() {
-  return (
-    <div className="flex h-screen overflow-hidden">
-      <div className="w-[280px] space-y-3 p-5 animate-pulse">
-        <div className="h-8 bg-mint-border/20 rounded" />
-        <div className="h-8 bg-mint-border/20 rounded" />
-        {[1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className="h-6 bg-mint-border/10 rounded ml-4" />
-        ))}
-      </div>
-      <div className="flex-1 p-6 space-y-3 animate-pulse">
-        <div className="h-4 w-48 bg-mint-border/20 rounded" />
-        <div className="h-8 w-64 bg-mint-border/20 rounded" />
-        <div className="space-y-2">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-16 bg-mint-border/10 rounded-xl" />
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
-
 export default function WorkspacePage() {
   const currentView = useFileTreeStore((s) => s.currentView)
   const selectNode = useFileTreeStore((s) => s.selectNode)
   const selectedNodeId = useFileTreeStore((s) => s.selectedNodeId)
+  const lastClickTimestamp = useFileTreeStore((s) => s.lastClickTimestamp)
   const loading = useFileTreeStore((s) => s.loading)
   const error = useFileTreeStore((s) => s.error)
   const loadTree = useFileTreeStore((s) => s.loadTree)
@@ -56,26 +33,40 @@ export default function WorkspacePage() {
   const documentInfo = useDocumentInfo()
 
   const loadEditorFromTree = useEditorStore((s) => s.loadEditorFromTree)
+  const performSave = useEditorStore((s) => s.performSave)
+  const isDirty = useEditorStore((s) => s.isDirty)
+  const tree = useFileTreeStore((s) => s.getTree())
 
   const [workspaceView, setWorkspaceView] = useState<WorkspaceView>("workspace")
-  const selectedBeforeTrash = useRef<string | null>(null)
+  const prevNodeIdRef = useRef<string | null>(null)
 
   useEffect(() => {
     loadTree()
   }, [loadTree])
 
+  // 切换节点前 flush 未保存的内容
   useEffect(() => {
-    if (selectedNodeId && documentInfo) {
-      loadEditorFromTree(selectedNodeId)
+    const prevId = prevNodeIdRef.current
+    if (prevId && prevId !== selectedNodeId && isDirty) {
+      performSave(prevId)
     }
-  }, [selectedNodeId, loadEditorFromTree, documentInfo])
+    prevNodeIdRef.current = selectedNodeId
+  }, [selectedNodeId, performSave, isDirty])
 
   useEffect(() => {
-    if (workspaceView !== "trash") return
-    if (selectedNodeId && selectedNodeId !== selectedBeforeTrash.current) {
+    if (selectedNodeId && documentInfo) {
+      loadEditorFromTree(selectedNodeId, tree)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedNodeId, loadEditorFromTree, documentInfo])
+
+  // 在回收站视图中点击任意文件树节点 → 自动切换回工作区
+  useEffect(() => {
+    if (workspaceView === "trash") {
       setWorkspaceView("workspace")
     }
-  }, [selectedNodeId, workspaceView])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastClickTimestamp])
 
   const handleBreadcrumbClick = useCallback(
     (id: string) => selectNode(id),
@@ -97,9 +88,8 @@ export default function WorkspacePage() {
 
   const handleTrashClick = useCallback(() => {
     if (workspaceView === "trash") return
-    selectedBeforeTrash.current = selectedNodeId
     setWorkspaceView("trash")
-  }, [workspaceView, selectedNodeId])
+  }, [workspaceView])
 
   if (loading) {
     return <WorkspaceSkeleton />
