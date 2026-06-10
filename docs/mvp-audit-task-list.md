@@ -21,7 +21,7 @@
 | 20260610-011 | P1 | 待执行 | 将文件树结构加载与文档正文加载拆分 | - |
 | 20260610-012 | P1 | 待执行 | 为 `documentRepo` 增加单文档读取接口 | - |
 | 20260610-013 | P1 | 待执行 | 重构 `WorkspacePage` 的文件点击到编辑器加载流程 | - |
-| 20260610-014 | P1 | 待执行 | 修复编辑器加载 effect 依赖不完整问题 | - |
+| 20260610-014 | P1 | 已完成 | 修复编辑器加载 effect 依赖不完整问题 | `WorkspacePage` 编辑器加载 effect 改为使用 `loadFromNode` 直接传入 `documentInfo.content` 与 `documentInfo.title`，不再依赖外部 `tree` 变量，移除 `eslint-disable` 注释，依赖数组完整。 |
 | 20260610-015 | P1 | 待执行 | 梳理状态唯一来源，消除重复状态 | - |
 | 20260610-016 | P1 | 待执行 | 逐步移除或规范 `fileTreeStore.ts` 兼容层 | - |
 | 20260610-017 | P1 | 待执行 | 为文件树增加节点索引 | - |
@@ -191,3 +191,21 @@
 - 文件树重命名当前打开文档后，编辑器标题同步更新。
 - 后续编辑器保存不会用旧标题覆盖文件树新名称。
 
+## 20260610-014 完成说明
+
+### 问题
+
+`WorkspacePage` 中编辑器加载的 `useEffect` 内部使用了外部变量 `tree`，但未将其列入依赖数组，而是通过 `eslint-disable` 跳过校验。这会导致 `tree` 更新后编辑器不会重新加载，且隐瞒了潜在的闭包陈旧问题。
+
+### 修复
+
+- 将编辑器加载 effect 从 `loadEditorFromTree(selectedNodeId, tree)` 重构为 `loadFromNode(selectedNodeId, documentInfo.content, documentInfo.title)`。
+- `loadFromNode` 直接接受文档内容与标题，不再依赖整棵 `tree`，从而消除了缺失的依赖。
+- 移除 `// eslint-disable-next-line react-hooks/exhaustive-deps` 注释，使 effect 依赖数组 `[selectedNodeId, loadFromNode, documentInfo]` 自洽完整。
+- 同时移除了不再使用的 `tree` 变量与 `loadEditorFromTree` 引用。
+
+### 验收标准
+
+- `WorkspacePage` 的编辑器加载 effect 不再包含 `eslint-disable` 注释。
+- TypeScript 编译通过且无新的 hook 规则警告。
+- `tree` 更新时，编辑器仍能通过 `documentInfo` 的变化正确感知并重新加载。

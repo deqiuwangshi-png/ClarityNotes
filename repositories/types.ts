@@ -100,6 +100,7 @@ export interface IFileTreeRepository {
 
 export interface IDocumentRepository {
   upsert(fileId: string, content: DocNode, wordCount: number): Promise<string>
+  getByFileId(fileId: string): Promise<DocumentRow | null>
 }
 
 export interface ITrashRepository {

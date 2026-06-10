@@ -32,33 +32,39 @@ export default function WorkspacePage() {
   const folderName = useFolderName()
   const documentInfo = useDocumentInfo()
 
-  const loadEditorFromTree = useEditorStore((s) => s.loadEditorFromTree)
+  const loadFromNode = useEditorStore((s) => s.loadFromNode)
   const performSave = useEditorStore((s) => s.performSave)
   const isDirty = useEditorStore((s) => s.isDirty)
-  const tree = useFileTreeStore((s) => s.getTree())
 
   const [workspaceView, setWorkspaceView] = useState<WorkspaceView>("workspace")
   const prevNodeIdRef = useRef<string | null>(null)
+  const savingRef = useRef<Promise<void> | null>(null)
 
   useEffect(() => {
     loadTree()
   }, [loadTree])
 
-  // 切换节点前 flush 未保存的内容
+  // 切换节点前 flush 未保存的内容，并等待保存完成
   useEffect(() => {
     const prevId = prevNodeIdRef.current
     if (prevId && prevId !== selectedNodeId && isDirty) {
-      performSave(prevId)
+      savingRef.current = performSave(prevId)
     }
     prevNodeIdRef.current = selectedNodeId
   }, [selectedNodeId, performSave, isDirty])
 
   useEffect(() => {
-    if (selectedNodeId && documentInfo) {
-      loadEditorFromTree(selectedNodeId, tree)
+    const loadEditor = async () => {
+      // 等待前一个文档的保存完成再加载新文档
+      if (savingRef.current) {
+        await savingRef.current
+      }
+      if (selectedNodeId && documentInfo) {
+        loadFromNode(selectedNodeId, documentInfo.content, documentInfo.title)
+      }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedNodeId, loadEditorFromTree, documentInfo])
+    loadEditor()
+  }, [selectedNodeId, loadFromNode, documentInfo])
 
   // 在回收站视图中点击任意文件树节点 → 自动切换回工作区
   useEffect(() => {

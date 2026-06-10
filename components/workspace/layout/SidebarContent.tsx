@@ -29,8 +29,11 @@ export function SidebarContent({ isTrashActive, onToggleSidebar, onTrashClick }:
   const tree = useFileTreeDataStore((s) => s.getTree())
 
   const handleSearchSelect = useCallback(
-    (nodeId: string) => selectNode(nodeId),
-    [selectNode],
+    (nodeId: string) => {
+      selectNode(nodeId)
+      clearSearch()
+    },
+    [selectNode, clearSearch],
   )
   const handleSearchClear = useCallback(() => clearSearch(), [clearSearch])
   const handleSearchRecent = useCallback(

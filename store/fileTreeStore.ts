@@ -74,7 +74,7 @@ export const useFileTreeStore = ((selector?: (state: FileTreeStateCompat) => unk
           const tree = useFileTreeDataStore.getState()._tree
           ui.setCreatingNodeId(newId)
           ui.selectNode(newId, tree)
-          ui.expand(tree[0]?.id ?? newId)
+          ui.expand(parentId)
         }
       },
 
@@ -84,7 +84,7 @@ export const useFileTreeStore = ((selector?: (state: FileTreeStateCompat) => unk
           const tree = useFileTreeDataStore.getState()._tree
           ui.setCreatingNodeId(newId)
           ui.selectNode(newId, tree)
-          ui.expand(tree[0]?.id ?? newId)
+          ui.expand(parentId)
         }
       },
 
