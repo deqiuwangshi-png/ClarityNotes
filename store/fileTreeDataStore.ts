@@ -26,10 +26,23 @@ interface FileTreeDataState {
   commitRename: (nodeId: string, newName: string) => Promise<void>
   cancelCreate: (nodeId: string) => TreeNode[]
   deleteNode: (nodeId: string) => Promise<void>
+  updateNodeLocal: (nodeId: string, patch: Partial<Pick<TreeNode, "name" | "content" | "wordCount" | "updatedAt">>) => void
 
   /** 公开 selector */
   getTree: () => TreeNode[]
   getSelectedNode: (selectedNodeId: string | null) => TreeNode | null
+}
+
+function patchNodeInTree(
+  nodes: TreeNode[],
+  nodeId: string,
+  patch: Partial<Pick<TreeNode, "name" | "content" | "wordCount" | "updatedAt">>,
+): TreeNode[] {
+  return nodes.map((node) => {
+    if (node.id === nodeId) return { ...node, ...patch }
+    if (!node.children) return node
+    return { ...node, children: patchNodeInTree(node.children, nodeId, patch) }
+  })
 }
 
 export const useFileTreeDataStore = create<FileTreeDataState>()((set, get) => ({
@@ -103,6 +116,10 @@ export const useFileTreeDataStore = create<FileTreeDataState>()((set, get) => ({
     if ("error" in result) return _tree
     set({ _tree: result.newTree })
     return result.newTree
+  },
+
+  updateNodeLocal: (nodeId, patch) => {
+    set((state) => ({ _tree: patchNodeInTree(state._tree, nodeId, patch) }))
   },
 
   deleteNode: async (nodeId: string) => {

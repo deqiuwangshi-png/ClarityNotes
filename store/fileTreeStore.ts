@@ -1,6 +1,7 @@
 import { useRef, useMemo } from "react"
 import { useFileTreeDataStore } from "@/store/fileTreeDataStore"
 import { useFileTreeUIStore } from "@/store/fileTreeUIStore"
+import { useEditorStore } from "@/store/editorStore"
 import type { TreeNode } from "@/types/fileTree"
 import { findNode } from "@/lib/services/fileTreeService"
 
@@ -92,7 +93,12 @@ export const useFileTreeStore = ((selector?: (state: FileTreeStateCompat) => unk
       },
 
       commitRename: async (nodeId: string, newName: string) => {
-        await data.commitRename(nodeId, newName)
+        const trimmedName = newName.trim()
+        await data.commitRename(nodeId, trimmedName)
+        const renamedNode = findNode(useFileTreeDataStore.getState()._tree, nodeId)
+        if (renamedNode?.name === trimmedName) {
+          useEditorStore.getState().syncTitleFromTreeRename(nodeId, trimmedName)
+        }
         ui.setCreatingNodeId(null)
       },
 
@@ -107,6 +113,12 @@ export const useFileTreeStore = ((selector?: (state: FileTreeStateCompat) => unk
       },
 
       deleteNode: async (nodeId: string) => {
+        const editor = useEditorStore.getState()
+        if (editor.loadedNodeId === nodeId && editor.isDirty) {
+          await editor.performSave(nodeId)
+          const latestEditor = useEditorStore.getState()
+          if (latestEditor.loadedNodeId === nodeId && latestEditor.isDirty) return
+        }
         await data.deleteNode(nodeId)
         const tree = useFileTreeDataStore.getState()._tree
         const rootId = tree[0]?.id ?? null
