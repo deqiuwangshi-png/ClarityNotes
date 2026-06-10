@@ -15,6 +15,7 @@ interface DocumentEditorProps {
 
 export function DocumentEditor({ breadcrumbPaths, onBreadcrumbClick, onMenuAction, menuActions }: DocumentEditorProps) {
   const isSaved = useEditorStore((s) => s.isSaved);
+  const saveError = useEditorStore((s) => s.error);
   const { collapsed } = useSidebarLayout();
 
   return (
@@ -24,6 +25,7 @@ export function DocumentEditor({ breadcrumbPaths, onBreadcrumbClick, onMenuActio
           breadcrumbPaths={breadcrumbPaths}
           onBreadcrumbClick={onBreadcrumbClick}
           isSaved={isSaved}
+          saveError={saveError}
           menuActions={menuActions}
           onMenuAction={onMenuAction}
         />
